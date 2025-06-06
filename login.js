@@ -98,7 +98,7 @@
                     showNotification(`Welcome, ${user.displayName}!`, true);
                     // Redirect to dashboard after 2 seconds
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = 'profile.html';
                     }, 2000);
                 }).catch((error) => {
                     const errorCode = error.code;
@@ -145,7 +145,7 @@
                 // User is signed in
                 showNotification(`Welcome back, ${user.email || user.displayName}! Redirecting...`, true);
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = 'profile.html';
                 }, 2000);
             }
         });
