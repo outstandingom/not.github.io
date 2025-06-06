@@ -1,18 +1,29 @@
-    // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
-            authDomain: "login-fa2eb.firebaseapp.com",
-            projectId: "login-fa2eb",
-            storageBucket: "login-fa2eb.appspot.com",
-            messagingSenderId: "1093052500996",
-            appId: "1:1093052500996:web:05a13485172c455e93b951",
-            measurementId: "G-9TC2J0YQ3R"
-        };
+// firebase-config.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+// Your Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
+  authDomain: "login-fa2eb.firebaseapp.com",
+  projectId: "login-fa2eb",
+  storageBucket: "login-fa2eb.appspot.com",
+  messagingSenderId: "1093052500996",
+  appId: "1:1093052500996:web:05a13485172c455e93b951",
+  measurementId: "G-9TC2J0YQ3R"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Export Firebase services
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+export { auth, db, storage };
         
         // DOM Elements
         const registerForm = document.getElementById('registerForm');
