@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCut | Premium Salon Services</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="main.js" defer></script>  <style>
+        :root {
+            --primary: #000;
+            --secondary: #8a6d3b;
+            --light: #f9f9f9;
+            --accent: #ff6b6b;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fff;
+            color: #000;
+            padding-bottom: 70px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .logo span {
+            color: var(--secondary);
+        }
+        
+        .location-indicator {
+            background: rgba(138, 109, 59, 0.1);
+            border-radius: 20px;
+            padding: 5px 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .location-indicator:hover {
+            background: rgba(138, 109, 59, 0.2);
+            cursor: pointer;
+        }
+        
+        .search-container {
+            position: relative;
+            display: flex;
+            margin: 15px 0;
+        }
+        
+        .search-container input {
+            padding: 12px 20px 12px 45px;
+            border-radius: 30px;
+            border: 1px solid #e0e0e0;
+            flex-grow: 1;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .search-container input:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(138, 109, 59, 0.2);
+            outline: none;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #777;
+            font-size: 18px;
+        }
+        
+        .search-button {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 0 25px;
+            margin-left: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(138, 109, 59, 0.3);
+        }
+        
+        .search-button:hover {
+            background-color: #7a5f32;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(138, 109, 59, 0.4);
+        }
+        
+        .search-button:active {
+            transform: translateY(0);
+        }
+        
+        .category {
+            white-space: nowrap;
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 1px solid #e0e0e0;
+            background: #f9f9f9;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .category.active, .category:hover {
+            background-color: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        
+        .service-card {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .service-img {
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .service-card:hover .service-img img {
+            transform: scale(1.05);
+        }
+        
+        .service-img .category-tag {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--accent);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .featured-banner {
+            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(50,50,50,0.85) 100%);
+            color: white;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .featured-banner h1 {
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        
+        .featured-banner p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+            max-width: 500px;
+        }
+        
+        .section-title {
+            position: relative;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: var(--secondary);
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            padding: 12px 0;
+            text-align: center;
+            color: #777;
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active, .nav-item:hover {
+            color: var(--primary);
+        }
+        
+        .nav-item i {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+        }
+        
+        .location-modal .modal-content {
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        
+        .location-header {
+            background: linear-gradient(135deg, var(--secondary) 0%, #a1885d 100%);
+            color: white;
+            padding: 20px;
+        }
+        
+        .location-option {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .location-option:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .location-option i {
+            margin-right: 15px;
+            color: var(--secondary);
+        }
+        
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 24px;
+            }
+            
+            .featured-banner {
+                padding: 20px;
+            }
+            
+            .featured-banner h1 {
+                font-size: 24px;
+            }
+            
+            .search-button {
+                padding: 0 20px;
+            }
+            
+            .search-container input {
+                padding-left: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="sticky-top bg-white shadow-sm">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="logo">Pro<span>Cut</span></div>
+                <div class="location-indicator" data-bs-toggle="modal" data-bs-target="#locationModal">
+                    <i class="fas fa-map-marker-alt me-2"></i>
+                    <span class="location-text">Neelbad Rd, Bhopal</span>
+                </div>
+            </div>
+            
+            <!-- Enhanced Search Section -->
+            <!-- Replace your search container with this -->
+<div class="search-container">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" id="searchInput" placeholder="Search for 'Haircut', 'Spa', 'Massage'...">
+    <button class="search-button">
+        <i class="fas fa-search me-2"></i> Search
+    </button>
+</div>
+        </div>
+        
+        <!-- Categories Navigation -->
+        <div class="container overflow-auto d-flex gap-3 py-2">
+            <div class="category active">All Services</div>
+            <div class="category">Women's Salon</div>
+            <div class="category">Men's Salon</div>
+            <div class="category">Hair Styling</div>
+            <div class="category">Hair Coloring</div>
+            <div class="category">Spa & Massage</div>
+            <div class="category">Facial & Skin Care</div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container py-4">
+        <!-- Featured Banner -->
+        <div class="featured-banner">
+            <h1>Premium Hair Spa Treatment</h1>
+            <p>Revitalize your hair with our deep conditioning treatment that nourishes from root to tip. Experience luxury haircare with visible results.</p>
+            <button class="btn btn-light rounded-pill px-4 py-2 fw-bold">Book Now</button>
+        </div>
+        
+        <!-- Popular Services -->
+        <h3 class="section-title">Popular Salon Services</h3>
+        <div class="row g-4">
+            <!-- Service 1 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="service-card">
+                    <div class="service-img">
+                        <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1674" alt="Women's Haircut">
+                        <div class="category-tag">Women</div>
+                    </div>
+                    <div class="p-4">
+                        <h5>Women's Haircut & Styling</h5>
+                        <p class="text-muted small mb-3">Professional haircut with blow dry and styling by our expert stylists.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-warning">
+                                <i class="fas fa-star"></i> 4.8 <span class="text-muted">(124)</span>
+                            </div>
+                            <div>
+                                <span class="text-muted text-decoration-line-through me-2">₹999</span>
+                                <strong class="h5">₹799</strong>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3">Book Appointment</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Service 2 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="service-card">
+                    <div class="service-img">
+                        <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=1740" alt="Men's Haircut">
+                        <div class="category-tag">Men</div>
+                    </div>
+                    <div class="p-4">
+                        <h5>Men's Haircut & Shave</h5>
+                        <p class="text-muted small mb-3">Classic haircut and traditional shaving experience with hot towels.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-warning">
+                                <i class="fas fa-star"></i> 4.6 <span class="text-muted">(89)</span>
+                            </div>
+                            <strong class="h5">₹499</strong>
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3">Book Appointment</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Service 3 -->
+            <div class="col-md-6 col-lg-4">
+                <div class="service-card">
+                    <div class="service-img">
+                        <img src="https://images.unsplash.com/photo-1599351431405-41ecca4ccb20?q=80&w=1740" alt="Hair Coloring">
+                        <div class="category-tag">Coloring</div>
+                    </div>
+                    <div class="p-4">
+                        <h5>Premium Hair Coloring</h5>
+                        <p class="text-muted small mb-3">Expert hair coloring with ammonia-free products for vibrant results.</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-warning">
+                                <i class="fas fa-star"></i> 4.7 <span class="text-muted">(76)</span>
+                            </div>
+                            <div>
+                                <span class="text-muted text-decoration-line-through me-2">₹2499</span>
+                                <strong class="h5">₹1899</strong>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100 mt-3">Book Appointment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        
+         
+
+    <!-- Location Modal -->
+    <div class="modal fade location-modal" id="locationModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="location-header">
+                    <h5 class="modal-title">Select Your Location</h5>
+                    <p class="mb-0">Choose your preferred salon location</p>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="location-option" data-location="Neelbad Rd, Bhopal">
+                        <i class="fas fa-map-marker-alt"></i> Neelbad Rd, Bhopal (Current)
+                    </div>
+                    <div class="location-option" data-location="MP Nagar, Bhopal">
+                        <i class="fas fa-map-marker-alt"></i> MP Nagar, Bhopal
+                    </div>
+                    <div class="location-option" data-location="New Market, Bhopal">
+                        <i class="fas fa-map-marker-alt"></i> New Market, Bhopal
+                    </div>
+                    <div class="location-option" data-location="Arera Colony, Bhopal">
+                        <i class="fas fa-map-marker-alt"></i> Arera Colony, Bhopal
+                    </div>
+                    <div class="location-option" data-location="Kolar Road, Bhopal">
+                        <i class="fas fa-map-marker-alt"></i> Kolar Road, Bhopal
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav d-md-none">
+        <div class="container d-flex justify-content-around">
+            <a href="#" class="nav-item active">
+                <i class="fas fa-home"></i>
+                <span class="nav-text">Home</span>
+            </a>
+
+            <a href="bookings.html" class="nav-item">
+                <i class="fas fa-calendar"></i>
+                <span class="nav-text">Bookings</span>
+            </a>
+            <a href="profile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span class="nav-text">Profile</span>
+            </a>
+        </div>
+    </nav>
+
+        <!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore-compat.js"></script>
+
+        
+<script src="main.js" defer></script>
+</body>
+    </html>
