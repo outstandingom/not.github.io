@@ -1,4 +1,4 @@
-// Firebase configuration
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
             authDomain: "login-fa2eb.firebaseapp.com",
@@ -16,11 +16,12 @@
 
         // DOM elements
         const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
         const toastContainer = document.getElementById('toastContainer');
         const form = document.getElementById('merchantRegistrationForm');
         const addServiceBtn = document.getElementById('addServiceBtn');
         const saveServiceBtn = document.getElementById('saveServiceBtn');
-        const serviceInputForm = document.getElementById('serviceInputForm');
+        const serviceInputForm = document.querySelector('.service-form');
         const servicesList = document.getElementById('servicesList');
         const salonImageUrl = document.getElementById('salonImageUrl');
         const salonImagePreview = document.getElementById('salonImagePreview');
@@ -33,18 +34,18 @@
         // Show toast notification
         function showToast(message, isError = false) {
             const toast = document.createElement('div');
-            toast.className = `toast align-items-center ${isError ? 'error' : ''}`;
+            toast.className = `toast align-items-center ${isError ? 'bg-danger' : 'bg-success'}`;
             toast.setAttribute('role', 'alert');
             toast.setAttribute('aria-live', 'assertive');
             toast.setAttribute('aria-atomic', 'true');
             
             toast.innerHTML = `
                 <div class="d-flex">
-                    <div class="toast-body">
+                    <div class="toast-body text-white">
                         <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2"></i>
                         ${message}
                     </div>
-                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             `;
             
@@ -66,6 +67,15 @@
         // Update progress bar
         function updateProgress(percent) {
             progressBar.style.width = `${percent}%`;
+            progressBar.setAttribute('aria-valuenow', percent);
+            progressPercent.textContent = `${percent}%`;
+            
+            // Update step indicators
+            const steps = document.querySelectorAll('.step');
+            if (percent >= 25) steps[0].classList.add('active');
+            if (percent >= 50) steps[1].classList.add('active');
+            if (percent >= 75) steps[2].classList.add('active');
+            if (percent >= 100) steps[3].classList.add('active');
         }
 
         // Toggle service form
@@ -105,7 +115,7 @@
             addServiceBtn.style.display = 'block';
         });
 
-         // Render services list
+        // Render services list
         function renderServices() {
             if (services.length === 0) {
                 servicesList.innerHTML = '<div class="alert alert-info">No services added yet. Click "Add Service" to get started.</div>';
@@ -142,7 +152,7 @@
                 salonImagePreview.src = url;
                 salonImagePreview.style.display = 'block';
             } else {
-                salonImagePreview.style.display = 'none';
+                salonImagePreview.src = 'https://via.placeholder.com/300x200?text=Image+Preview';
             }
         });
 
@@ -162,9 +172,9 @@
                 `;
             } else {
                 mapPreview.innerHTML = `
-                    <div class="text-center">
-                        <i class="fas fa-map-marked-alt"></i>
-                        <p class="mt-2">Map preview will appear here</p>
+                    <div class="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
+                        <i class="fas fa-map-marked-alt fa-3x mb-2"></i>
+                        <p>Map preview will appear here</p>
                     </div>
                 `;
             }
@@ -175,7 +185,7 @@
             e.preventDefault();
             
             // Show progress
-            updateProgress(30);
+            updateProgress(10);
             
             // Validate form
             if (!document.getElementById('termsAgree').checked) {
@@ -229,12 +239,39 @@
             // Show loading state
             const submitBtn = document.getElementById('registerMerchantBtn');
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registering...';
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing Registration...';
             
-            updateProgress(60);
+            updateProgress(30);
             
             try {
-                // Save to Firestore
+                // Step 1: Upgrade user to merchant
+                await db.collection('users').doc(user.uid).update({
+                    accountType: 'merchant',
+                    merchantInfo: {
+                        merchantId: user.uid,
+                        businessName: salonData.name
+                    }
+                });
+                
+                updateProgress(50);
+                showToast('User account upgraded to merchant');
+                
+                // Step 2: Create merchant document
+                const merchantData = {
+                    businessName: salonData.name,
+                    address: salonData.address,
+                    phone: salonData.contact.phone,
+                    category: 'Salon',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    status: 'active'
+                };
+                
+                await db.collection('merchants').doc(user.uid).set(merchantData);
+                
+                updateProgress(70);
+                showToast('Merchant profile created successfully');
+                
+                // Step 3: Create salon document
                 await db.collection('salons').add(salonData);
                 
                 updateProgress(100);
@@ -245,10 +282,10 @@
                     window.location.href = 'merchantdashboard.html';
                 }, 2000);
             } catch (error) {
-                console.error('Error saving salon:', error);
-                showToast('Error registering salon: ' + error.message, true);
+                console.error('Error saving data:', error);
+                showToast('Error: ' + error.message, true);
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Register as Merchant';
+                submitBtn.innerHTML = '<i class="fas fa-store me-2"></i>Complete Merchant Registration';
                 updateProgress(0);
             }
         });
@@ -265,9 +302,16 @@
                 } else {
                     // Pre-fill email if available
                     document.getElementById('contactEmail').value = user.email || '';
+                    
+                    // Show welcome message
+                    showToast(`Welcome, ${user.email || 'user'}! Let's set up your merchant account.`);
                 }
             });
             
             // Render services
             renderServices();
+            
+            // Initialize step indicator
+            document.querySelectorAll('.step')[0].classList.add('active');
         });
+                        
