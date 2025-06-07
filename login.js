@@ -57,7 +57,7 @@
                     showNotification(`Welcome back, ${user.email}!`, true);
                     // Redirect to dashboard after 2 seconds
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        window.location.href = 'index.html.html';
                     }, 2000);
                 })
                 .catch((error) => {
