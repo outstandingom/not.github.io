@@ -12,7 +12,12 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
+
+// Initialize Supabase
+const supabase = supabase.createClient(
+    'https://xwjalnofppcadadjxnaj.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3amFsbm9mcHBjYWRhZGp4bmFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTU0MDksImV4cCI6MjA2NDg5MTQwOX0.e6tpjy9YdaKD7dxGZkFy_gmFtol4VhZ2bMddwU2M8wA'
+);
 
 // DOM elements
 const progressBar = document.getElementById('progressBar');
@@ -26,6 +31,8 @@ const salonImageUrl = document.getElementById('salonImageUrl');
 const salonImagePreview = document.getElementById('salonImagePreview');
 const mapLink = document.getElementById('mapLink');
 const mapPreview = document.getElementById('mapPreview');
+const successModal = document.getElementById('successModal');
+const continueBtn = document.getElementById('continueBtn');
 
 // Services array
 let services = [];
@@ -204,28 +211,27 @@ form.addEventListener('submit', async (e) => {
         description: document.getElementById('salonDescription').value,
         address: document.getElementById('salonAddress').value,
         city: document.getElementById('salonCity').value,
-        mapLink: document.getElementById('mapLink').value,
-        imageUrl: document.getElementById('salonImageUrl').value,
-        contact: {
-            name: document.getElementById('contactName').value,
-            phone: document.getElementById('contactPhone').value,
-            email: document.getElementById('contactEmail').value
-        },
-        hours: {
-            opening: document.getElementById('openingTime').value,
-            closing: document.getElementById('closingTime').value,
-            closedOnSunday: document.getElementById('sundayClosed').checked
-        },
+        map_link: document.getElementById('mapLink').value,
+        image_url: document.getElementById('salonImageUrl').value,
+        contact_name: document.getElementById('contactName').value,
+        contact_phone: document.getElementById('contactPhone').value,
+        contact_email: document.getElementById('contactEmail').value,
+        opening_time: document.getElementById('openingTime').value,
+        closing_time: document.getElementById('closingTime').value,
+        closed_on_sunday: document.getElementById('sundayClosed').checked,
         services: services,
-        ownerId: user.uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        owner_id: user.uid,
+        owner_email: user.email,
         status: 'active',
-        searchTerms: [
-            document.getElementById('salonName').value.toLowerCase(),
-            document.getElementById('salonCity').value.toLowerCase(),
-            ...services.map(s => s.name.toLowerCase())
-        ]
+        created_at: new Date().toISOString()
     };
+    
+    // Generate searchable terms
+    const searchTerms = [
+        salonData.name.toLowerCase(),
+        salonData.city.toLowerCase(),
+        ...salonData.services.map(s => s.name.toLowerCase())
+    ];
     
     // Show loading state
     const submitBtn = document.getElementById('registerMerchantBtn');
@@ -235,56 +241,53 @@ form.addEventListener('submit', async (e) => {
     updateProgress(30);
     
     try {
-        // First, update the user's profile to merchant
-        await db.collection('users').doc(user.uid).update({
-            accountType: 'merchant',
-            merchantInfo: {
-                businessName: salonData.name,
-                address: salonData.address,
-                phone: salonData.contact.phone,
-                category: 'salon', // You can make this dynamic if needed
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'active'
-            }
-        });
+        // Step 1: Insert salon data into Supabase
+        const { data, error: insertError } = await supabase
+            .from('salons')
+            .insert([{ ...salonData, search_terms: searchTerms }]);
         
-        updateProgress(50);
+        if (insertError) throw insertError;
         
-        // Then create the merchant document
-        await db.collection('merchants').doc(user.uid).set({
-            businessName: salonData.name,
-            address: salonData.address,
-            phone: salonData.contact.phone,
-            category: 'salon',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            status: 'active'
-        });
+        updateProgress(60);
         
-        updateProgress(70);
+        // Step 2: Update user role in Supabase
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+                id: user.uid,
+                email: user.email,
+                role: 'merchant',
+                updated_at: new Date().toISOString()
+            }, {
+                onConflict: 'id'
+            });
         
-        // Finally, create the salon document
-        await db.collection('salons').add(salonData);
+        if (profileError) throw profileError;
         
         updateProgress(100);
-        showToast('Registration successful! Redirecting to dashboard...');
+        showToast('Registration successful!');
         
-        // Redirect after delay
-        setTimeout(() => {
-            window.location.href = 'merchantdashboard.html';
-        }, 2000);
+        // Show success modal
+        successModal.classList.add('active');
+        
     } catch (error) {
-        console.error('Error during registration:', error);
-        showToast('Error during registration: ' + error.message, true);
+        console.error('Registration error:', error);
+        showToast(`Error: ${error.message}`, true);
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Register as Merchant';
         updateProgress(0);
     }
 });
 
+// Continue to dashboard button
+continueBtn.addEventListener('click', () => {
+    window.location.href = 'merchantdashboard.html';
+});
+
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Check if user is logged in
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async (user) => {
         if (!user) {
             showToast('You need to be logged in to register as a merchant', true);
             setTimeout(() => {
@@ -294,19 +297,25 @@ document.addEventListener('DOMContentLoaded', () => {
             // Pre-fill email if available
             document.getElementById('contactEmail').value = user.email || '';
             
-            // Check if user is already a merchant
-            db.collection('users').doc(user.uid).get()
-                .then(doc => {
-                    if (doc.exists && doc.data().accountType === 'merchant') {
-                        showToast('You are already registered as a merchant', true);
-                        setTimeout(() => {
-                            window.location.href = 'userprofile.html';
-                        }, 2000);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking user status:', error);
-                });
+            // Check if user is already a merchant in Supabase
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.uid)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (profile && profile.role === 'merchant') {
+                    showToast('You are already registered as a merchant', true);
+                    setTimeout(() => {
+                        window.location.href = 'merchantdashboard.html';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Profile check error:', error);
+            }
         }
     });
     
