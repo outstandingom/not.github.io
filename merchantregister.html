@@ -752,7 +752,7 @@
 
         // Continue to dashboard
         continueBtn.addEventListener('click', () => {
-            window.location.href = 'merchantdashboard.html';
+            window.location.href = 'index.html';
         });
 
         // Initialize
@@ -779,7 +779,7 @@
                         if (data && data.account_type === 'merchant') {
                             showToast('You are already registered as a merchant', true);
                             setTimeout(() => {
-                                window.location.href = 'merchantdashboard.html';
+                                window.location.href = 'index.html';
                             }, 2000);
                         }
                     } catch (error) {
