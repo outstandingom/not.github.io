@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProCut | Become a Merchant</title>
+    <title>ProCut | Salon Registration</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary: #000;
@@ -13,95 +16,116 @@
             --light: #f9f9f9;
             --accent: #ff6b6b;
             --success: #28a745;
+            --dark-bg: #1a1a2e;
+            --card-bg: #16213e;
         }
         
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #fff;
-            color: var(--primary);
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
             padding-bottom: 70px;
         }
         
         .merchant-header {
-            background-color: var(--light);
+            background: rgba(0, 0, 0, 0.5);
             padding: 20px 0;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
         
         .merchant-card {
-            border: 1px solid #e0e0e0;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
         }
         
         .merchant-card:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            transform: translateY(-3px);
         }
         
         .merchant-card-title {
             font-weight: 600;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e0e0e0;
-            color: var(--secondary);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e9c46a;
+            font-size: 1.25rem;
         }
         
         .form-label {
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            color: #f1faee;
         }
         
         .form-control, .form-select {
             padding: 12px 15px;
             border-radius: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            transition: border 0.3s;
+            margin-bottom: 20px;
+            border: 1px solid #4a5568;
+            background: rgba(26, 32, 44, 0.8);
+            color: white;
+            transition: all 0.3s;
         }
         
         .form-control:focus, .form-select:focus {
             border-color: var(--secondary);
             box-shadow: 0 0 0 0.2rem rgba(138, 109, 59, 0.25);
+            background: rgba(26, 32, 44, 1);
+            color: white;
         }
         
         .salon-image-preview {
             width: 100%;
-            height: 200px;
+            height: 220px;
             object-fit: cover;
             border-radius: 8px;
             display: none;
-            margin-bottom: 15px;
-            border: 1px dashed #ddd;
+            margin-bottom: 20px;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
         
         .upload-btn {
             display: block;
             width: 100%;
-            padding: 12px;
-            background-color: var(--light);
-            border: 1px dashed #e0e0e0;
+            padding: 15px;
+            background: rgba(26, 32, 44, 0.8);
+            border: 2px dashed rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            color: #a0aec0;
         }
         
         .upload-btn:hover {
-            background-color: #f0f0f0;
+            background: rgba(26, 32, 44, 1);
             border-color: var(--secondary);
+            color: white;
         }
         
         .service-item {
             display: flex;
             align-items: center;
-            padding: 10px;
-            border: 1px solid #e0e0e0;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            margin-bottom: 10px;
-            background-color: #f9f9f9;
+            margin-bottom: 12px;
+            background: rgba(26, 32, 44, 0.6);
+            transition: all 0.3s;
+        }
+        
+        .service-item:hover {
+            background: rgba(26, 32, 44, 0.8);
+            transform: translateX(5px);
         }
         
         .service-details {
@@ -109,7 +133,7 @@
         }
         
         .remove-service {
-            color: #ff6b6b;
+            color: var(--accent);
             cursor: pointer;
             margin-left: 10px;
             font-size: 1.2rem;
@@ -117,38 +141,7 @@
         }
         
         .remove-service:hover {
-            transform: scale(1.1);
-        }
-        
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: #fff;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 100;
-        }
-        
-        .nav-item {
-            padding: 12px 0;
-            text-align: center;
-            color: #777;
-            transition: all 0.3s;
-        }
-        
-        .nav-item.active {
-            color: var(--primary);
-        }
-        
-        .nav-item i {
-            display: block;
-            font-size: 20px;
-            margin-bottom: 5px;
-        }
-        
-        .nav-text {
-            font-size: 12px;
+            transform: scale(1.2);
         }
         
         .progress-container {
@@ -163,32 +156,37 @@
         
         .progress-bar {
             height: 4px;
-            background: var(--secondary);
+            background: linear-gradient(90deg, var(--secondary), #e9c46a);
             width: 0%;
             transition: width 0.4s ease;
         }
         
         .logo {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
-            color: var(--primary);
+            color: white;
+            letter-spacing: 1px;
         }
         
         .logo span {
-            color: var(--secondary);
+            color: #e9c46a;
         }
         
         .btn-primary {
-            background-color: var(--secondary);
+            background: linear-gradient(135deg, var(--secondary), #e9c46a);
             border: none;
-            padding: 12px 24px;
+            padding: 14px 28px;
             font-weight: 600;
             transition: all 0.3s;
+            border-radius: 50px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(138, 109, 59, 0.3);
         }
         
         .btn-primary:hover {
-            background-color: #7a5f32;
-            transform: translateY(-2px);
+            background: linear-gradient(135deg, #7a5f32, #d4ac3d);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(138, 109, 59, 0.4);
         }
         
         .toast-container {
@@ -199,9 +197,10 @@
         }
         
         .toast {
-            background-color: rgba(255, 255, 255, 0.95);
+            background: rgba(26, 32, 44, 0.95);
             border-left: 4px solid var(--success);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            color: white;
         }
         
         .toast.error {
@@ -210,20 +209,28 @@
         
         .map-preview {
             width: 100%;
-            height: 150px;
+            height: 180px;
             border-radius: 8px;
-            background-color: #f5f5f5;
+            background: rgba(26, 32, 44, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #777;
-            margin-top: 10px;
-            border: 1px dashed #ddd;
+            color: #a0aec0;
+            margin-top: 15px;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+        }
+        
+        .map-preview iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
         }
         
         .map-preview i {
-            font-size: 2rem;
-            margin-bottom: 10px;
+            font-size: 2.5rem;
+            margin-bottom: 15px;
         }
         
         .success-modal {
@@ -232,14 +239,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.9);
             z-index: 2000;
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s;
+            transition: all 0.4s;
         }
         
         .success-modal.active {
@@ -248,14 +255,16 @@
         }
         
         .modal-content {
-            background: white;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
             border-radius: 16px;
             padding: 40px;
             text-align: center;
             max-width: 500px;
             width: 90%;
             transform: translateY(20px);
-            transition: transform 0.3s;
+            transition: transform 0.4s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
         
         .success-modal.active .modal-content {
@@ -265,17 +274,130 @@
         .success-icon {
             font-size: 80px;
             color: var(--success);
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            text-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
         }
         
         .page-title {
             font-weight: 700;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+            color: #e9c46a;
+            font-size: 2rem;
         }
         
         .page-subtitle {
-            color: #777;
+            color: #a0aec0;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .back-btn {
+            background: rgba(26, 32, 44, 0.8);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .back-btn:hover {
+            background: rgba(26, 32, 44, 1);
+            transform: translateX(-3px);
+        }
+        
+        .section-icon {
+            margin-right: 10px;
+            color: #e9c46a;
+            font-size: 1.2rem;
+        }
+        
+        .form-title {
+            font-size: 1.4rem;
+            color: #e9c46a;
             margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .service-title {
+            color: #e9c46a;
+            margin-bottom: 20px;
+        }
+        
+        .terms-link {
+            color: #e9c46a;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .terms-link:hover {
+            color: #d4ac3d;
+            text-decoration: underline;
+        }
+        
+        .floating-label {
+            position: relative;
+            margin-bottom: 25px;
+        }
+        
+        .floating-label input, .floating-label textarea, .floating-label select {
+            padding-top: 20px;
+        }
+        
+        .floating-label label {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            color: #a0aec0;
+            pointer-events: none;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+        
+        .floating-label input:focus ~ label, 
+        .floating-label input:not(:placeholder-shown) ~ label,
+        .floating-label textarea:focus ~ label,
+        .floating-label textarea:not(:placeholder-shown) ~ label,
+        .floating-label select:focus ~ label,
+        .floating-label select:not([value=""]) ~ label {
+            top: -10px;
+            left: 10px;
+            font-size: 0.75rem;
+            background: var(--dark-bg);
+            padding: 0 5px;
+            color: #e9c46a;
+        }
+        
+        .required::after {
+            content: " *";
+            color: var(--accent);
+        }
+        
+        .feature-card {
+            background: rgba(26, 32, 44, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(26, 32, 44, 0.9);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            color: #e9c46a;
+            margin-bottom: 15px;
+        }
+        
+        .features-container {
+            margin-top: 40px;
         }
     </style>
 </head>
@@ -301,12 +423,14 @@
     </div>
 
     <!-- Header Section -->
-    <header class="sticky-top bg-white shadow-sm">
+    <header class="sticky-top">
         <div class="container py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="logo">Pro<span>Cut</span></div>
                 <div class="d-flex align-items-center">
-                    <i class="fas fa-arrow-left me-3" style="font-size: 20px; cursor: pointer;" onclick="window.location.href = 'profile.html'"></i>
+                    <div class="back-btn me-3" onclick="window.location.href = 'profile.html'">
+                        <i class="fas fa-arrow-left"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -315,7 +439,7 @@
         <div class="merchant-header">
             <div class="container">
                 <h2 class="page-title">Become a Merchant</h2>
-                <p class="page-subtitle">Register your salon to start accepting bookings from customers.</p>
+                <p class="page-subtitle">Register your salon to start accepting bookings from customers</p>
             </div>
         </div>
     </header>
@@ -325,31 +449,31 @@
         <form id="merchantRegistrationForm">
             <!-- Salon Information -->
             <div class="merchant-card">
-                <h5 class="merchant-card-title"><i class="fas fa-store me-2"></i>Salon Information</h5>
+                <h5 class="merchant-card-title"><i class="fas fa-store section-icon"></i>Salon Information</h5>
                 
-                <div class="mb-3">
-                    <label for="salonName" class="form-label">Salon Name *</label>
-                    <input type="text" class="form-control" id="salonName" placeholder="Enter salon name" required>
+                <div class="floating-label">
+                    <input type="text" class="form-control" id="salonName" placeholder=" " required>
+                    <label for="salonName" class="required">Salon Name</label>
                 </div>
                 
-                <div class="mb-3">
-                    <label for="salonDescription" class="form-label">Description</label>
-                    <textarea class="form-control" id="salonDescription" rows="3" placeholder="Describe your salon and services"></textarea>
+                <div class="floating-label">
+                    <textarea class="form-control" id="salonDescription" rows="3" placeholder=" "></textarea>
+                    <label for="salonDescription">Description</label>
                 </div>
                 
-                <div class="mb-3">
-                    <label for="salonAddress" class="form-label">Address *</label>
-                    <textarea class="form-control" id="salonAddress" rows="2" placeholder="Full address of your salon" required></textarea>
+                <div class="floating-label">
+                    <textarea class="form-control" id="salonAddress" rows="2" placeholder=" " required></textarea>
+                    <label for="salonAddress" class="required">Address</label>
                 </div>
                 
                 <div class="row">
-                    <div class="col-md-6">
-                        <label for="salonCity" class="form-label">City *</label>
-                        <input type="text" class="form-control" id="salonCity" placeholder="City" required>
+                    <div class="col-md-6 floating-label">
+                        <input type="text" class="form-control" id="salonCity" placeholder=" " required>
+                        <label for="salonCity" class="required">City</label>
                     </div>
-                    <div class="col-md-6">
-                        <label for="mapLink" class="form-label">Google Maps Location Link *</label>
-                        <input type="url" class="form-control" id="mapLink" name="mapLink" placeholder="https://maps.app.goo.gl/..." required>
+                    <div class="col-md-6 floating-label">
+                        <input type="url" class="form-control" id="mapLink" name="mapLink" placeholder=" " required>
+                        <label for="mapLink" class="required">Google Maps Location Link</label>
                     </div>
                 </div>
                 
@@ -363,7 +487,7 @@
             
             <!-- Salon Images -->
             <div class="merchant-card">
-                <h5 class="merchant-card-title"><i class="fas fa-images me-2"></i>Salon Images</h5>
+                <h5 class="merchant-card-title"><i class="fas fa-images section-icon"></i>Salon Images</h5>
                 
                 <img id="salonImagePreview" class="salon-image-preview" alt="Salon preview">
                 
@@ -377,47 +501,49 @@
             
             <!-- Contact Information -->
             <div class="merchant-card">
-                <h5 class="merchant-card-title"><i class="fas fa-id-card me-2"></i>Contact Information</h5>
+                <h5 class="merchant-card-title"><i class="fas fa-id-card section-icon"></i>Contact Information</h5>
                 
                 <div class="row">
-                    <div class="col-md-6">
-                        <label for="contactName" class="form-label">Contact Person *</label>
-                        <input type="text" class="form-control" id="contactName" placeholder="Name" required>
+                    <div class="col-md-6 floating-label">
+                        <input type="text" class="form-control" id="contactName" placeholder=" " required>
+                        <label for="contactName" class="required">Contact Person</label>
                     </div>
-                    <div class="col-md-6">
-                        <label for="contactPhone" class="form-label">Phone Number *</label>
-                        <input type="tel" class="form-control" id="contactPhone" placeholder="Phone" required>
+                    <div class="col-md-6 floating-label">
+                        <input type="tel" class="form-control" id="contactPhone" placeholder=" " required>
+                        <label for="contactPhone" class="required">Phone Number</label>
                     </div>
                 </div>
                 
-                <label for="contactEmail" class="form-label">Email *</label>
-                <input type="email" class="form-control" id="contactEmail" placeholder="Email" required>
+                <div class="floating-label">
+                    <input type="email" class="form-control" id="contactEmail" placeholder=" " required>
+                    <label for="contactEmail" class="required">Email</label>
+                </div>
             </div>
             
             <!-- Business Hours -->
             <div class="merchant-card">
-                <h5 class="merchant-card-title"><i class="fas fa-clock me-2"></i>Business Hours</h5>
+                <h5 class="merchant-card-title"><i class="fas fa-clock section-icon"></i>Business Hours</h5>
                 
                 <div class="row">
-                    <div class="col-md-6">
-                        <label for="openingTime" class="form-label">Opening Time *</label>
+                    <div class="col-md-6 floating-label">
                         <select class="form-select" id="openingTime" required>
-                            <option value="">Select time</option>
+                            <option value=""> </option>
                             <option value="08:00">8:00 AM</option>
                             <option value="09:00">9:00 AM</option>
                             <option value="10:00" selected>10:00 AM</option>
                             <option value="11:00">11:00 AM</option>
                         </select>
+                        <label for="openingTime" class="required">Opening Time</label>
                     </div>
-                    <div class="col-md-6">
-                        <label for="closingTime" class="form-label">Closing Time *</label>
+                    <div class="col-md-6 floating-label">
                         <select class="form-select" id="closingTime" required>
-                            <option value="">Select time</option>
+                            <option value=""> </option>
                             <option value="18:00">6:00 PM</option>
                             <option value="19:00">7:00 PM</option>
                             <option value="20:00" selected>8:00 PM</option>
                             <option value="21:00">9:00 PM</option>
                         </select>
+                        <label for="closingTime" class="required">Closing Time</label>
                     </div>
                 </div>
                 
@@ -431,7 +557,7 @@
             
             <!-- Services Offered -->
             <div class="merchant-card">
-                <h5 class="merchant-card-title"><i class="fas fa-scissors me-2"></i>Services Offered</h5>
+                <h5 class="merchant-card-title"><i class="fas fa-scissors section-icon"></i>Services Offered</h5>
                 
                 <div id="servicesList">
                     <div class="alert alert-info">
@@ -441,21 +567,21 @@
                 
                 <div class="service-input-form mt-3" id="serviceInputForm" style="display: none;">
                     <div class="row g-2">
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <input type="text" class="form-control" id="serviceNameInput" placeholder="Service name (e.g. Haircut)" required>
                         </div>
                         <div class="col-md-4">
                             <input type="number" class="form-control" id="servicePriceInput" placeholder="Price (e.g. 50)" required min="1">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <button type="button" class="btn btn-success w-100" id="saveServiceBtn">
-                                <i class="fas fa-check"></i>
+                                <i class="fas fa-check me-1"></i> Add
                             </button>
                         </div>
                     </div>
                 </div>
                 
-                <button type="button" class="btn btn-outline-secondary w-100 mt-3" id="addServiceBtn">
+                <button type="button" class="btn btn-outline-light w-100 mt-3" id="addServiceBtn">
                     <i class="fas fa-plus me-2"></i> Add Service
                 </button>
             </div>
@@ -465,7 +591,7 @@
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="termsAgree" required>
                     <label class="form-check-label" for="termsAgree">
-                        I agree to the <a href="#" class="text-decoration-none">Terms & Conditions</a> and <a href="#" class="text-decoration-none">Merchant Agreement</a>
+                        I agree to the <a href="#" class="terms-link">Terms & Conditions</a> and <a href="#" class="terms-link">Merchant Agreement</a>
                     </label>
                 </div>
             </div>
@@ -475,25 +601,48 @@
                 Register as Merchant
             </button>
         </form>
+        
+        <!-- Features Section -->
+        <div class="features-container">
+            <h3 class="text-center mb-4">Why Register with ProCut?</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fas fa-users feature-icon"></i>
+                        <h4>Reach More Clients</h4>
+                        <p>Get discovered by thousands of potential customers in your area.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fas fa-calendar-check feature-icon"></i>
+                        <h4>Easy Booking</h4>
+                        <p>Automated booking system saves you time and reduces no-shows.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <i class="fas fa-chart-line feature-icon"></i>
+                        <h4>Business Insights</h4>
+                        <p>Track your performance and get valuable business analytics.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Firebase configuration - Replace with your own config
+        // Firebase configuration
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID",
-            measurementId: "YOUR_MEASUREMENT_ID"
+            apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
+            authDomain: "login-fa2eb.firebaseapp.com",
+            projectId: "login-fa2eb",
+            storageBucket: "login-fa2eb.appspot.com",
+            messagingSenderId: "1093052500996",
+            appId: "1:1093052500996:web:05a13485172c455e93b951",
+            measurementId: "G-9TC2J0YQ3R"
         };
 
         // Initialize Firebase
@@ -538,7 +687,8 @@
             `;
             
             toastContainer.appendChild(toast);
-                   // Initialize Bootstrap toast
+            
+            // Initialize Bootstrap toast
             const bsToast = new bootstrap.Toast(toast, {
                 autohide: true,
                 delay: 3000
@@ -591,6 +741,8 @@
             document.getElementById('servicePriceInput').value = '';
             serviceInputForm.style.display = 'none';
             addServiceBtn.style.display = 'block';
+            
+            showToast(`Service "${name}" added successfully!`);
         });
 
         // Render services list
@@ -619,6 +771,7 @@
                     const id = e.target.getAttribute('data-id');
                     services = services.filter(s => s.id !== id);
                     renderServices();
+                    showToast('Service removed');
                 });
             });
         }
@@ -638,16 +791,28 @@
         mapLink.addEventListener('input', () => {
             const url = mapLink.value.trim();
             if (url) {
-                mapPreview.innerHTML = `
-                    <iframe 
-                        src="https://maps.google.com/maps?q=${encodeURIComponent(url)}&output=embed" 
-                        width="100%" 
-                        height="100%" 
-                        style="border:0; border-radius: 8px;" 
-                        allowfullscreen="" 
-                        loading="lazy">
-                    </iframe>
-                `;
+                // Extract the location from the URL
+                const locationParam = url.includes('?q=') ? url.split('?q=')[1].split('&')[0] : '';
+                
+                if (locationParam) {
+                    mapPreview.innerHTML = `
+                        <iframe 
+                            src="https://maps.google.com/maps?q=${encodeURIComponent(locationParam)}&output=embed" 
+                            width="100%" 
+                            height="100%" 
+                            style="border:0; border-radius: 8px;" 
+                            allowfullscreen="" 
+                            loading="lazy">
+                        </iframe>
+                    `;
+                } else {
+                    mapPreview.innerHTML = `
+                        <div class="text-center">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p class="mt-2">Could not extract location from URL</p>
+                        </div>
+                    `;
+                }
             } else {
                 mapPreview.innerHTML = `
                     <div class="text-center">
@@ -706,7 +871,7 @@
                 },
                 services: services,
                 ownerId: user.uid,
-                createdAt: new Date(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 status: 'pending',
                 searchTerms: [
                     document.getElementById('salonName').value.toLowerCase(),
@@ -729,7 +894,7 @@
                     address: salonData.address,
                     phone: salonData.contact.phone,
                     category: 'salon',
-                    createdAt: new Date(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     status: 'pending'
                 });
                 
@@ -748,7 +913,7 @@
                         address: salonData.address,
                         phone: salonData.contact.phone,
                         category: 'salon',
-                        createdAt: new Date(),
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                         status: 'pending'
                     }
                 });
@@ -779,34 +944,20 @@
             // Initialize services rendering
             renderServices();
             
-            // Simulate logged-in user for demo purposes
-            const demoUser = {
-                uid: 'demo-user-12345',
-                email: 'demo@procut.com'
-            };
-            
-            // For demo purposes - in a real app, use actual Firebase auth
-            auth.currentUser = demoUser;
-            
-            // Pre-fill email if available
-            document.getElementById('contactEmail').value = demoUser.email || '';
-            
-            // Pre-fill some form data for demo
-            document.getElementById('salonName').value = 'Luxury Hair Studio';
-            document.getElementById('salonDescription').value = 'Premium hair salon with expert stylists and comfortable atmosphere. Specializing in cuts, coloring, and treatments.';
-            document.getElementById('salonAddress').value = '123 Beauty Street, Downtown';
-            document.getElementById('salonCity').value = 'New York';
-            document.getElementById('mapLink').value = 'https://goo.gl/maps/example';
-            document.getElementById('salonImageUrl').value = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800';
-            document.getElementById('contactName').value = 'Sarah Johnson';
-            document.getElementById('contactPhone').value = '555-123-4567';
-            
-            // Trigger image preview
-            salonImageUrl.dispatchEvent(new Event('input'));
+            // Listen for auth state changes
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // Pre-fill email if available
+                    document.getElementById('contactEmail').value = user.email || '';
+                } else {
+                    // Redirect to login page if not authenticated
+                    showToast('You need to log in to access this page', true);
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
+                }
+            });
         });
     </script>
 </body>
 </html>
-
-            
-            // 
