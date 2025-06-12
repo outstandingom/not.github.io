@@ -1,280 +1,273 @@
-     // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
-            authDomain: "login-fa2eb.firebaseapp.com",
-            projectId: "login-fa2eb",
-            storageBucket: "login-fa2eb.appspot.com",
-            messagingSenderId: "1093052500996",
-            appId: "1:1093052500996:web:05a13485172c455e93b951",
-            measurementId: "G-9TC2J0YQ3R"
-        };
+// Initialize Supabase client
+const supabaseUrl = 'https://xwjalnofppcadadjxnaj.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3amFsbm9mcHBjYWRhZGp4bmFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTU0MDksImV4cCI6MjA2NDg5MTQwOX0.e6tpjy9YdaKD7dxGZkFy_gmFtol4VhZ2bMddwU2M8wA';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // DOM Elements
-        const registerForm = document.getElementById('registerForm');
-        const fullNameInput = document.getElementById('fullName');
-        const phoneInput = document.getElementById('phoneNumber');
-        const emailInput = document.getElementById('registerEmail');
-        const passwordInput = document.getElementById('registerPassword');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const termsCheckbox = document.getElementById('termsAgree');
-        const registerButton = document.getElementById('registerButton');
-        const registerLoader = document.getElementById('registerLoader');
-        const registerText = document.getElementById('registerText');
-        const googleSignInBtn = document.getElementById('googleSignIn');
-        const successMessage = document.getElementById('successMessage');
-        const firebaseError = document.getElementById('firebaseError');
-        const passwordToggle = document.getElementById('registerPasswordToggle');
-        const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
-        const passwordStrengthBar = document.getElementById('passwordStrengthBar');
-        const passwordStrengthText = document.getElementById('passwordStrengthText');
-
-        // Password strength levels
-        const strengthLevels = {
-            0: {text: "Very Weak", color: "#d32f2f", width: "25%"},
-            1: {text: "Weak", color: "#ff9800", width: "50%"},
-            2: {text: "Medium", color: "#ffc107", width: "75%"},
-            3: {text: "Strong", color: "#4caf50", width: "100%"}
-        };
-
-        // Toggle password visibility
-        passwordToggle.addEventListener('click', function() {
-            togglePasswordVisibility(passwordInput, this);
-        });
-
-        confirmPasswordToggle.addEventListener('click', function() {
-            togglePasswordVisibility(confirmPasswordInput, this);
-        });
-
-        function togglePasswordVisibility(inputElement, toggleElement) {
-            const type = inputElement.getAttribute('type') ==='password' ? 'text' : 'password';
-            inputElement.setAttribute('type', type);
-            const icon = toggleElement.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
+document.addEventListener('DOMContentLoaded', function() {
+    // DOM Elements
+    const registerForm = document.getElementById('registerForm');
+    const registerButton = document.getElementById('registerButton');
+    const registerLoader = document.getElementById('registerLoader');
+    const registerText = document.getElementById('registerText');
+    const firebaseError = document.getElementById('firebaseError');
+    
+    // Password toggle functionality
+    const passwordToggle = document.getElementById('registerPasswordToggle');
+    const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
+    const registerPassword = document.getElementById('registerPassword');
+    const confirmPassword = document.getElementById('confirmPassword');
+    
+    // Password strength indicators
+    const passwordStrengthBar = document.getElementById('passwordStrengthBar');
+    const passwordStrengthText = document.getElementById('passwordStrengthText');
+    
+    // Error message elements
+    const nameError = document.getElementById('nameError');
+    const phoneError = document.getElementById('phoneError');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    const confirmPasswordError = document.getElementById('confirmPasswordError');
+    const termsError = document.getElementById('termsError');
+    const successMessage = document.getElementById('successMessage');
+    
+    // Password toggle event listeners
+    passwordToggle.addEventListener('click', function() {
+        togglePasswordVisibility(registerPassword, this);
+    });
+    
+    confirmPasswordToggle.addEventListener('click', function() {
+        togglePasswordVisibility(confirmPassword, this);
+    });
+    
+    // Password strength checker
+    registerPassword.addEventListener('input', function() {
+        checkPasswordStrength(this.value);
+    });
+    
+    // Form submission
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Reset error messages
+        resetErrorMessages();
+        firebaseError.style.display = 'none';
+        
+        // Get form values
+        const fullName = document.getElementById('fullName').value.trim();
+        const phoneNumber = document.getElementById('phoneNumber').value.trim();
+        const email = document.getElementById('registerEmail').value.trim();
+        const password = registerPassword.value;
+        const confirmPass = confirmPassword.value;
+        const termsAgreed = document.getElementById('termsAgree').checked;
+        
+        // Validate form
+        let isValid = true;
+        
+        if (!fullName) {
+            showError(nameError, 'Please enter your full name');
+            isValid = false;
         }
-
-        // Password strength calculation
-        passwordInput.addEventListener('input', function() {
-            const password = this.value;
-            let strength = 0;
-            
-            // Check password length
-            if (password.length >= 8) strength++;
-            
-            // Check for uppercase letters
-            if (/[A-Z]/.test(password)) strength++;
-            
-            // Check for numbers
-            if (/\d/.test(password)) strength++;
-            
-            // Check for special characters
-            if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
-            
-            // Limit strength to 3
-            strength = Math.min(strength, 3);
-            
-            // Update strength indicator
-            const level = strengthLevels[strength];
-            passwordStrengthBar.style.width = level.width;
-            passwordStrengthBar.style.backgroundColor = level.color;
-            passwordStrengthText.textContent = level.text;
-            passwordStrengthText.className = "password-strength-text";
-            
-            if (strength === 0) {
-                passwordStrengthText.classList.add("strength-weak");
-            } else if (strength === 1) {
-                passwordStrengthText.classList.add("strength-medium");
-            } else {
-                passwordStrengthText.classList.add("strength-strong");
-            }
-        });
-
-        // Form validation
-        function validateForm() {
-            let isValid = true;
-            hideAllErrors();
-            
-            // Full name validation
-            if (!fullNameInput.value.trim()) {
-                showError('nameError', 'Full name is required');
-                fullNameInput.classList.add('error');
-                isValid = false;
-            } else {
-                fullNameInput.classList.remove('error');
-            }
-            
-            // Phone number validation
-            const phoneRegex = /^[0-9]{10,15}$/;
-            if (!phoneRegex.test(phoneInput.value.replace(/\D/g, ''))) {
-                showError('phoneError', 'Please enter a valid phone number (10-15 digits)');
-                phoneInput.classList.add('error');
-                isValid = false;
-            } else {
-                phoneInput.classList.remove('error');
-            }
-            
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(emailInput.value)) {
-                showError('emailError', 'Please enter a valid email address');
-                emailInput.classList.add('error');
-                isValid = false;
-            } else {
-                emailInput.classList.remove('error');
-            }
-            
-            // Password validation
-            if (passwordInput.value.length < 8) {
-                showError('passwordError', 'Password must be at least 8 characters');
-                passwordInput.classList.add('error');
-                isValid = false;
-            } else {
-                passwordInput.classList.remove('error');
-            }
-            
-            // Confirm password validation
-            if (passwordInput.value !== confirmPasswordInput.value) {
-                showError('confirmPasswordError', 'Passwords do not match');
-                confirmPasswordInput.classList.add('error');
-                isValid = false;
-            } else {
-                confirmPasswordInput.classList.remove('error');
-            }
-            
-            // Terms agreement validation
-            if (!termsCheckbox.checked) {
-                showError('termsError', 'You must agree to the terms');
-                isValid = false;
-            }
-            
-            return isValid;
+        
+        if (!phoneNumber || !validatePhoneNumber(phoneNumber)) {
+            showError(phoneError, 'Please enter a valid phone number');
+            isValid = false;
         }
-
-        function showError(elementId, message) {
-            const errorElement = document.getElementById(elementId);
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
+        
+        if (!email || !validateEmail(email)) {
+            showError(emailError, 'Please enter a valid email address');
+            isValid = false;
         }
-
-        function hideAllErrors() {
-            const errors = document.querySelectorAll('.error-message');
-            errors.forEach(error => {
-                error.style.display = 'none';
-            });
+        
+        if (!password || password.length < 8) {
+            showError(passwordError, 'Password must be at least 8 characters');
+            isValid = false;
+        } else if (!validatePassword(password)) {
+            showError(passwordError, 'Password must include uppercase, number, and special character');
+            isValid = false;
         }
-
-        // Firebase registration
-        registerForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!validateForm()) return;
-            
-            // Show loading state
-            registerLoader.style.display = 'inline-block';
-            registerText.textContent = 'Creating Account...';
-            registerButton.disabled = true;
-            
-            const fullName = fullNameInput.value.trim();
-            const phone = phoneInput.value.replace(/\D/g, ''); // Remove non-digits for storage
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            
-            try {
-                // Create user with Firebase Authentication
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-                
-                // Save additional user data to Firestore
-                await db.collection('users').doc(user.uid).set({
-                    fullName: fullName,
-                    phone: phone,
-                    email: email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    role: 'customer'
-                });
-                
-                // Show success message
-                successMessage.textContent = 'Account created successfully! Redirecting to your profile...';
-                successMessage.style.display = 'block';
-                firebaseError.style.display = 'none';
-                
-                // Redirect to profile page after 2 seconds
-                setTimeout(() => {
-                    window.location.href = 'profile.html';
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Registration error:', error);
-                firebaseError.textContent = getFirebaseErrorMessage(error.code);
-                firebaseError.style.display = 'block';
-                successMessage.style.display = 'none';
-            } finally {
-                // Reset loading state
-                registerLoader.style.display = 'none';
-                registerText.textContent = 'Create Account';
-                registerButton.disabled = false;
-            }
-        });
-
-        // Google sign-in
-        googleSignInBtn.addEventListener('click', async function() {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            
-            try {
-                const result = await auth.signInWithPopup(provider);
-                const user = result.user;
-                
-                // Check if user already exists in Firestore
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                
-                if (!userDoc.exists) {
-                    // Save new user to Firestore
-                    await db.collection('users').doc(user.uid).set({
-                        fullName: user.displayName || 'Google User',
-                        email: user.email,
-                        phone: user.phoneNumber || '',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        role: 'customer'
-                    });
+        
+        if (password !== confirmPass) {
+            showError(confirmPasswordError, 'Passwords do not match');
+            isValid = false;
+        }
+        
+        if (!termsAgreed) {
+            showError(termsError, 'You must agree to the terms');
+            isValid = false;
+        }
+        
+        if (!isValid) return;
+        
+        // Show loading state
+        registerButton.disabled = true;
+        registerLoader.style.display = 'inline-block';
+        registerText.textContent = 'Creating Account...';
+        
+        try {
+            // Sign up with Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                        phone_number: phoneNumber
+                    }
                 }
-                
-                // Show success message
-                successMessage.textContent = 'Signed in successfully! Redirecting...';
-                successMessage.style.display = 'block';
-                firebaseError.style.display = 'none';
-                
-                // Redirect to profile page after 1 second
-                setTimeout(() => {
-                    window.location.href = 'profile.html';
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Google sign-in error:', error);
-                firebaseError.textContent = getFirebaseErrorMessage(error.code);
-                firebaseError.style.display = 'block';
-                successMessage.style.display = 'none';
+            });
+            
+            if (authError) {
+                throw authError;
             }
+            
+            // Store additional user data in a separate table
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .insert([
+                    { 
+                        id: authData.user.id,
+                        email: email,
+                        full_name: fullName,
+                        phone_number: phoneNumber,
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+            
+            if (userError) {
+                throw userError;
+            }
+            
+            // Show success message
+            successMessage.textContent = 'Registration successful! Please check your email to verify your account.';
+            successMessage.style.display = 'block';
+            
+            // Reset form
+            registerForm.reset();
+            
+            // Redirect to login page after 3 seconds
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Registration error:', error);
+            showFirebaseError(error.message);
+        } finally {
+            // Reset button state
+            registerButton.disabled = false;
+            registerLoader.style.display = 'none';
+            registerText.textContent = 'Create Account';
+        }
+    });
+    
+    // Google Sign In
+    document.getElementById('googleSignIn').addEventListener('click', async function() {
+        try {
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/success.html' // Create this page
+                }
+            });
+            
+            if (error) throw error;
+            
+        } catch (error) {
+            console.error('Google sign-in error:', error);
+            showFirebaseError(error.message);
+        }
+    });
+    
+    // Helper Functions
+    function togglePasswordVisibility(passwordField, toggleElement) {
+        const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordField.setAttribute('type', type);
+        
+        // Toggle eye icon
+        const icon = toggleElement.querySelector('i');
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+    }
+    
+    function checkPasswordStrength(password) {
+        // Reset strength indicators
+        passwordStrengthBar.style.width = '0%';
+        passwordStrengthText.textContent = '';
+        
+        if (!password) return;
+        
+        // Calculate strength (simple version)
+        let strength = 0;
+        
+        // Length check
+        if (password.length >= 8) strength += 1;
+        if (password.length >= 12) strength += 1;
+        
+        // Character type checks
+        if (/[A-Z]/.test(password)) strength += 1;
+        if (/[0-9]/.test(password)) strength += 1;
+        if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+        
+        // Update UI
+        let width = 0;
+        let text = '';
+        let color = '';
+        
+        if (strength <= 2) {
+            width = 33;
+            text = 'Weak';
+            color = '#d32f2f';
+        } else if (strength <= 4) {
+            width = 66;
+            text = 'Medium';
+            color = '#ff9800';
+        } else {
+            width = 100;
+            text = 'Strong';
+            color = '#4caf50';
+        }
+        
+        passwordStrengthBar.style.width = width + '%';
+        passwordStrengthBar.style.backgroundColor = color;
+        passwordStrengthText.textContent = text;
+        passwordStrengthText.className = 'password-strength-text strength-' + text.toLowerCase();
+    }
+    
+    function validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+    
+    function validatePhoneNumber(phone) {
+        const re = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+        return re.test(phone);
+    }
+    
+    function validatePassword(password) {
+        // At least 8 chars, 1 uppercase, 1 number, 1 special char
+        const re = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
+        return re.test(password);
+    }
+    
+    function showError(element, message) {
+        element.textContent = message;
+        element.style.display = 'block';
+    }
+    
+    function resetErrorMessages() {
+        const errorMessages = document.querySelectorAll('.error-message');
+        errorMessages.forEach(msg => {
+            msg.style.display = 'none';
         });
-
-        // Helper function to translate Firebase error codes
-        function getFirebaseErrorMessage(code) {
-            switch(code) {
-                case 'auth/email-already-in-use':
-                    return 'This email is already registered. Please sign in or use a different email.';
-                case 'auth/invalid-email':
-                    return 'The email address is not valid.';
-                case 'auth/weak-password':
-                    return 'Password should be at least 8 characters.';
-                case 'auth/popup-closed-by-user':
-                    return 'Google sign-in was canceled.';
-                case 'auth/network-request-failed':
-                    return 'Network error. Please check your internet connection.';
-                default:
-                    return 'An error occurred. Please try again.';
-            }
-}
+    }
+    
+    function showFirebaseError(message) {
+        firebaseError.textContent = message;
+        firebaseError.style.display = 'block';
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+            firebaseError.style.display = 'none';
+        }, 5000);
+    }
+});
