@@ -228,15 +228,62 @@
             margin-top: 8px;
             overflow: hidden;
             position: relative;
+            width: 100%;
         }
 
         .password-strength-bar {
             height: 100%;
             width: 0;
-            transition: width 0.4s ease;
+            transition: width 0.3s ease, background-color 0.3s ease;
             position: absolute;
             left: 0;
             top: 0;
+        }
+
+        .password-strength-text {
+            font-size: 0.8rem;
+            margin-top: 5px;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .strength-weak { color: #d32f2f; }
+        .strength-medium { color: #ff9800; }
+        .strength-strong { color: #4caf50; }
+
+        .password-requirements {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #666;
+            display: none;
+        }
+
+        .password-requirements ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        .password-requirements li {
+            margin-bottom: 5px;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .password-requirements li.valid::before {
+            content: '✓';
+            color: #4caf50;
+            position: absolute;
+            left: 0;
+        }
+
+        .password-requirements li.invalid::before {
+            content: '✗';
+            color: #d32f2f;
+            position: absolute;
+            left: 0;
         }
 
         .btn {
@@ -376,43 +423,6 @@
             transform-origin: left;
         }
 
-        .password-hints {
-            background: #f9f9f9;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            font-size: 0.85rem;
-            color: #666;
-        }
-
-        .password-hints ul {
-            padding-left: 20px;
-            margin-bottom: 0;
-        }
-
-        .password-hints li {
-            margin-bottom: 5px;
-        }
-
-        @media (max-width: 576px) {
-            .auth-card {
-                padding: 30px 20px;
-            }
-
-            .logo h1 {
-                font-size: 1.6rem;
-            }
-
-            .form-header h2 {
-                font-size: 1.5rem;
-            }
-
-            .social-login {
-                flex-direction: column;
-            }
-        }
-
-        /* Error message styling */
         .error-message {
             color: var(--error);
             font-size: 0.85rem;
@@ -427,17 +437,6 @@
             text-align: center;
             display: none;
         }
-
-        .password-strength-text {
-            font-size: 0.8rem;
-            margin-top: 5px;
-            text-align: right;
-            font-weight: 500;
-        }
-
-        .strength-weak { color: #d32f2f; }
-        .strength-medium { color: #ff9800; }
-        .strength-strong { color: #4caf50; }
 
         .loader {
             display: inline-block;
@@ -464,6 +463,24 @@
             font-size: 0.9rem;
             text-align: center;
             display: none;
+        }
+
+        @media (max-width: 576px) {
+            .auth-card {
+                padding: 30px 20px;
+            }
+
+            .logo h1 {
+                font-size: 1.6rem;
+            }
+
+            .form-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .social-login {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -529,13 +546,12 @@
                 </div>
                 <div class="password-strength-text" id="passwordStrengthText"></div>
                 <div class="error-message" id="passwordError">Password must be at least 8 characters</div>
-                <div class="password-hints">
-                    <p>Your password should include:</p>
+                <div class="password-requirements" id="passwordRequirements">
                     <ul>
-                        <li>At least 8 characters</li>
-                        <li>One uppercase letter</li>
-                        <li>One number</li>
-                        <li>One special character</li>
+                        <li class="invalid" id="req-length">At least 8 characters</li>
+                        <li class="invalid" id="req-upper">One uppercase letter</li>
+                        <li class="invalid" id="req-number">One number</li>
+                        <li class="invalid" id="req-special">One special character</li>
                     </ul>
                 </div>
             </div>
@@ -575,11 +591,338 @@
         
         <div class="auth-toggle">
             <span>Already have an account?</span>
-            <a href="login.html">login </a>
+            <a href="login.html">login</a>
         </div>
     </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="register.js"></script>
 </body>
 </html>
+// Supabase configuration
+const supabaseUrl = 'https://xwjalnofppcadadjxnaj.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3amFsbm9mcHBjYWRhZGp4bmFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTU0MDksImV4cCI6MjA2NDg5MTQwOX0.e6tpjy9YdaKD7dxGZkFy_gmFtol4VhZ2bMddwU2M8wA';
+
+// Initialize Supabase
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+// DOM Elements
+const registerForm = document.getElementById('registerForm');
+const fullNameInput = document.getElementById('fullName');
+const phoneInput = document.getElementById('phoneNumber');
+const emailInput = document.getElementById('registerEmail');
+const passwordInput = document.getElementById('registerPassword');
+const confirmPasswordInput = document.getElementById('confirmPassword');
+const termsCheckbox = document.getElementById('termsAgree');
+const registerButton = document.getElementById('registerButton');
+const registerLoader = document.getElementById('registerLoader');
+const registerText = document.getElementById('registerText');
+const googleSignInBtn = document.getElementById('googleSignIn');
+const successMessage = document.getElementById('successMessage');
+const firebaseError = document.getElementById('firebaseError');
+const passwordToggle = document.getElementById('registerPasswordToggle');
+const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
+const passwordStrengthBar = document.getElementById('passwordStrengthBar');
+const passwordStrengthText = document.getElementById('passwordStrengthText');
+const passwordRequirements = document.getElementById('passwordRequirements');
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', function() {
+    // Check auth state
+    checkAuthState();
+    
+    // Initialize password strength UI
+    updatePasswordStrengthUI(0, '');
+});
+
+// Password visibility toggle
+function togglePasswordVisibility(inputElement, toggleElement) {
+    const type = inputElement.type === 'password' ? 'text' : 'password';
+    inputElement.type = type;
+    const icon = toggleElement.querySelector('i');
+    icon.classList.toggle('fa-eye');
+    icon.classList.toggle('fa-eye-slash');
+}
+
+passwordToggle.addEventListener('click', () => togglePasswordVisibility(passwordInput, passwordToggle));
+confirmPasswordToggle.addEventListener('click', () => togglePasswordVisibility(confirmPasswordInput, confirmPasswordToggle));
+
+// Password strength calculation
+passwordInput.addEventListener('input', function() {
+    const password = this.value;
+    let strength = 0;
+    
+    // Check password requirements
+    const hasLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    // Update requirement indicators
+    document.getElementById('req-length').className = hasLength ? 'valid' : 'invalid';
+    document.getElementById('req-upper').className = hasUpper ? 'valid' : 'invalid';
+    document.getElementById('req-number').className = hasNumber ? 'valid' : 'invalid';
+    document.getElementById('req-special').className = hasSpecial ? 'valid' : 'invalid';
+    
+    // Show/hide requirements box
+    passwordRequirements.style.display = password.length > 0 ? 'block' : 'none';
+    
+    // Calculate strength (0-3)
+    if (hasLength) strength++;
+    if (hasUpper) strength++;
+    if (hasNumber) strength++;
+    if (hasSpecial) strength++;
+    
+    strength = Math.min(strength, 3); // Cap at 3
+    
+    updatePasswordStrengthUI(strength, password);
+});
+
+function updatePasswordStrengthUI(strength, password) {
+    const strengthLevels = {
+        0: { text: "Very Weak", color: "#d32f2f", width: "25%" },
+        1: { text: "Weak", color: "#ff9800", width: "50%" },
+        2: { text: "Medium", color: "#ffc107", width: "75%" },
+        3: { text: "Strong", color: "#4caf50", width: "100%" }
+    };
+    
+    const level = strengthLevels[strength];
+    
+    // Update strength bar
+    passwordStrengthBar.style.width = level.width;
+    passwordStrengthBar.style.backgroundColor = level.color;
+    
+    // Update text
+    passwordStrengthText.textContent = level.text;
+    passwordStrengthText.className = "password-strength-text";
+    
+    // Add appropriate class
+    if (strength === 0) {
+        passwordStrengthText.classList.add("strength-weak");
+    } else if (strength === 1) {
+        passwordStrengthText.classList.add("strength-medium");
+    } else {
+        passwordStrengthText.classList.add("strength-strong");
+    }
+}
+
+// Form validation
+function validateForm() {
+    let isValid = true;
+    hideAllErrors();
+    
+    // Full name validation
+    if (!fullNameInput.value.trim()) {
+        showError('nameError', 'Full name is required');
+        fullNameInput.classList.add('error');
+        isValid = false;
+    }
+    
+    // Phone number validation
+    const phoneRegex = /^[0-9]{10,15}$/;
+    if (!phoneRegex.test(phoneInput.value.replace(/\D/g, ''))) {
+        showError('phoneError', 'Please enter a valid phone number (10-15 digits)');
+        phoneInput.classList.add('error');
+        isValid = false;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput.value)) {
+        showError('emailError', 'Please enter a valid email address');
+        emailInput.classList.add('error');
+        isValid = false;
+    }
+    
+    // Password validation
+    const password = passwordInput.value;
+    if (password.length < 8) {
+        showError('passwordError', 'Password must be at least 8 characters');
+        passwordInput.classList.add('error');
+        isValid = false;
+    } else {
+        // Check for all requirements
+        const hasUpper = /[A-Z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        
+        if (!hasUpper || !hasNumber || !hasSpecial) {
+            showError('passwordError', 
+                'Password must contain at least one uppercase letter, one number, and one special character');
+            passwordInput.classList.add('error');
+            isValid = false;
+        }
+    }
+    
+    // Confirm password validation
+    if (passwordInput.value !== confirmPasswordInput.value) {
+        showError('confirmPasswordError', 'Passwords do not match');
+        confirmPasswordInput.classList.add('error');
+        isValid = false;
+    }
+    
+    // Terms agreement validation
+    if (!termsCheckbox.checked) {
+        showError('termsError', 'You must agree to the terms');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+function showError(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+}
+
+function hideAllErrors() {
+    document.querySelectorAll('.error-message').forEach(error => {
+        error.style.display = 'none';
+    });
+    document.querySelectorAll('.form-control').forEach(input => {
+        input.classList.remove('error');
+    });
+}
+
+// Supabase registration
+registerForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    // Show loading state
+    registerLoader.style.display = 'inline-block';
+    registerText.textContent = 'Creating Account...';
+    registerButton.disabled = true;
+    
+    const fullName = fullNameInput.value.trim();
+    const rawPhone = phoneInput.value.replace(/\D/g, '');
+    const email = emailInput.value.toLowerCase().trim();
+    const password = passwordInput.value;
+    
+    // Format phone number (add country code if missing)
+    const phone = rawPhone.length === 10 ? `1${rawPhone}` : rawPhone;
+    
+    try {
+        // 1. Sign up user with email/password
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    phone: phone
+                },
+                emailRedirectTo: window.location.origin + '/profile.html'
+            }
+        });
+        
+        if (authError) throw authError;
+        
+        // 2. Insert user data into public.users table
+        const { error: dbError } = await supabase
+            .from('users')
+            .insert([
+                { 
+                    id: authData.user.id,
+                    full_name: fullName,
+                    phone: phone,
+                    email: email,
+                    role: 'customer',
+                    created_at: new Date().toISOString()
+                }
+            ]);
+        
+        if (dbError) throw dbError;
+        
+        // Show success message
+        successMessage.innerHTML = `
+            Account created successfully!<br>
+            We've sent a verification email to <strong>${email}</strong>.
+            Please verify your email to complete registration.
+        `;
+        successMessage.style.display = 'block';
+        firebaseError.style.display = 'none';
+        
+        // Clear form
+        registerForm.reset();
+        updatePasswordStrengthUI(0, '');
+        passwordRequirements.style.display = 'none';
+        
+        // Redirect after 5 seconds if email is verified
+        setTimeout(() => {
+            if (authData.user?.email_confirmed_at) {
+                window.location.href = 'profile.html';
+            }
+        }, 5000);
+        
+    } catch (error) {
+        console.error('Registration error:', error);
+        firebaseError.textContent = getSupabaseErrorMessage(error.message);
+        firebaseError.style.display = 'block';
+        successMessage.style.display = 'none';
+        
+        // Highlight problematic fields
+        if (error.message.includes('email')) {
+            emailInput.classList.add('error');
+            showError('emailError', getSupabaseErrorMessage(error.message));
+        }
+        if (error.message.includes('password')) {
+            passwordInput.classList.add('error');
+            showError('passwordError', getSupabaseErrorMessage(error.message));
+        }
+    } finally {
+        // Reset loading state
+        registerLoader.style.display = 'none';
+        registerText.textContent = 'Create Account';
+        registerButton.disabled = false;
+    }
+});
+
+// Google sign-in with Supabase
+googleSignInBtn.addEventListener('click', async function() {
+    try {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin + '/profile.html'
+            }
+        });
+        
+        if (error) throw error;
+        
+    } catch (error) {
+        console.error('Google sign-in error:', error);
+        firebaseError.textContent = getSupabaseErrorMessage(error.message);
+        firebaseError.style.display = 'block';
+        successMessage.style.display = 'none';
+    }
+});
+
+// Error message handling
+function getSupabaseErrorMessage(message) {
+    if (!message) return 'An unknown error occurred. Please try again.';
+    
+    if (message.includes('User already registered')) {
+        return 'This email is already registered. Please sign in or use a different email.';
+    } else if (message.includes('Invalid email')) {
+        return 'The email address is not valid.';
+    } else if (message.includes('Password should be at least')) {
+        return 'Password should be at least 8 characters.';
+    } else if (message.includes('OAuth')) {
+        return 'Google sign-in was canceled or failed. Please try again.';
+    } else if (message.includes('Network')) {
+        return 'Network error. Please check your internet connection.';
+    } else if (message.includes('duplicate key value violates unique constraint')) {
+        return 'This email is already registered. Please sign in.';
+    } else {
+        return message.length > 100 ? 'An error occurred. Please try again.' : message;
+    }
+}
+
+// Check if user is already logged in
+async function checkAuthState() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) window.location.href = 'profile.html';
+}
