@@ -206,7 +206,7 @@ googleSignInBtn.addEventListener('click', async function() {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/profile.html'
+                redirectTo: window.location.origin + 'profile.html'
             }
         });
         
