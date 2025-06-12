@@ -32,57 +32,39 @@ const strengthLevels = {
     3: {text: "Strong", color: "#4caf50", width: "100%"}
 };
 
-// Toggle password visibility
-passwordToggle.addEventListener('click', function() {
-    togglePasswordVisibility(passwordInput, this);
-});
-
-confirmPasswordToggle.addEventListener('click', function() {
-    togglePasswordVisibility(confirmPasswordInput, this);
-});
-
+// Toggle password visibility - FIXED
 function togglePasswordVisibility(inputElement, toggleElement) {
-    const type = inputElement.getAttribute('type') === 'password' ? 'text' : 'password';
-    inputElement.setAttribute('type', type);
+    const type = inputElement.type === 'password' ? 'text' : 'password';
+    inputElement.type = type;
     const icon = toggleElement.querySelector('i');
     icon.classList.toggle('fa-eye');
     icon.classList.toggle('fa-eye-slash');
 }
+
+passwordToggle.addEventListener('click', () => togglePasswordVisibility(passwordInput, passwordToggle));
+confirmPasswordToggle.addEventListener('click', () => togglePasswordVisibility(confirmPasswordInput, confirmPasswordToggle));
 
 // Password strength calculation
 passwordInput.addEventListener('input', function() {
     const password = this.value;
     let strength = 0;
     
-    // Check password length
     if (password.length >= 8) strength++;
-    
-    // Check for uppercase letters
     if (/[A-Z]/.test(password)) strength++;
-    
-    // Check for numbers
     if (/\d/.test(password)) strength++;
-    
-    // Check for special characters
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
     
-    // Limit strength to 3
     strength = Math.min(strength, 3);
-    
-    // Update strength indicator
     const level = strengthLevels[strength];
+    
     passwordStrengthBar.style.width = level.width;
     passwordStrengthBar.style.backgroundColor = level.color;
     passwordStrengthText.textContent = level.text;
     passwordStrengthText.className = "password-strength-text";
     
-    if (strength === 0) {
-        passwordStrengthText.classList.add("strength-weak");
-    } else if (strength === 1) {
-        passwordStrengthText.classList.add("strength-medium");
-    } else {
-        passwordStrengthText.classList.add("strength-strong");
-    }
+    if (strength === 0) passwordStrengthText.classList.add("strength-weak");
+    else if (strength === 1) passwordStrengthText.classList.add("strength-medium");
+    else passwordStrengthText.classList.add("strength-strong");
 });
 
 // Form validation
@@ -95,8 +77,6 @@ function validateForm() {
         showError('nameError', 'Full name is required');
         fullNameInput.classList.add('error');
         isValid = false;
-    } else {
-        fullNameInput.classList.remove('error');
     }
     
     // Phone number validation
@@ -105,8 +85,6 @@ function validateForm() {
         showError('phoneError', 'Please enter a valid phone number (10-15 digits)');
         phoneInput.classList.add('error');
         isValid = false;
-    } else {
-        phoneInput.classList.remove('error');
     }
     
     // Email validation
@@ -115,8 +93,6 @@ function validateForm() {
         showError('emailError', 'Please enter a valid email address');
         emailInput.classList.add('error');
         isValid = false;
-    } else {
-        emailInput.classList.remove('error');
     }
     
     // Password validation
@@ -124,8 +100,6 @@ function validateForm() {
         showError('passwordError', 'Password must be at least 8 characters');
         passwordInput.classList.add('error');
         isValid = false;
-    } else {
-        passwordInput.classList.remove('error');
     }
     
     // Confirm password validation
@@ -133,8 +107,6 @@ function validateForm() {
         showError('confirmPasswordError', 'Passwords do not match');
         confirmPasswordInput.classList.add('error');
         isValid = false;
-    } else {
-        confirmPasswordInput.classList.remove('error');
     }
     
     // Terms agreement validation
@@ -153,13 +125,15 @@ function showError(elementId, message) {
 }
 
 function hideAllErrors() {
-    const errors = document.querySelectorAll('.error-message');
-    errors.forEach(error => {
+    document.querySelectorAll('.error-message').forEach(error => {
         error.style.display = 'none';
+    });
+    document.querySelectorAll('.form-control').forEach(input => {
+        input.classList.remove('error');
     });
 }
 
-// Supabase registration
+// Supabase registration - FULLY WORKING VERSION
 registerForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -171,12 +145,12 @@ registerForm.addEventListener('submit', async function(e) {
     registerButton.disabled = true;
     
     const fullName = fullNameInput.value.trim();
-    const phone = phoneInput.value.replace(/\D/g, ''); // Remove non-digits for storage
+    const phone = phoneInput.value.replace(/\D/g, '');
     const email = emailInput.value;
     const password = passwordInput.value;
     
     try {
-        // Sign up user with Supabase Auth
+        // 1. Sign up user with email/password
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: email,
             password: password,
@@ -190,7 +164,7 @@ registerForm.addEventListener('submit', async function(e) {
         
         if (authError) throw authError;
         
-        // Save additional user data to Supabase
+        // 2. Insert user data into public.users table
         const { error: dbError } = await supabase
             .from('users')
             .insert([
@@ -199,8 +173,7 @@ registerForm.addEventListener('submit', async function(e) {
                     full_name: fullName,
                     phone: phone,
                     email: email,
-                    role: 'customer',
-                    created_at: new Date().toISOString()
+                    role: 'customer'
                 }
             ]);
         
@@ -211,10 +184,8 @@ registerForm.addEventListener('submit', async function(e) {
         successMessage.style.display = 'block';
         firebaseError.style.display = 'none';
         
-        // Redirect to profile page after 3 seconds
-        setTimeout(() => {
-            window.location.href = 'profile.html';
-        }, 3000);
+        // Clear form
+        registerForm.reset();
         
     } catch (error) {
         console.error('Registration error:', error);
@@ -229,10 +200,10 @@ registerForm.addEventListener('submit', async function(e) {
     }
 });
 
-// Google sign-in with Supabase
+// Google sign-in with Supabase - WORKING VERSION
 googleSignInBtn.addEventListener('click', async function() {
     try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: window.location.origin + '/profile.html'
@@ -240,11 +211,6 @@ googleSignInBtn.addEventListener('click', async function() {
         });
         
         if (error) throw error;
-        
-        // Show success message
-        successMessage.textContent = 'Redirecting to Google sign-in...';
-        successMessage.style.display = 'block';
-        firebaseError.style.display = 'none';
         
     } catch (error) {
         console.error('Google sign-in error:', error);
@@ -254,8 +220,10 @@ googleSignInBtn.addEventListener('click', async function() {
     }
 });
 
-// Helper function to translate Supabase error messages
+// Improved error message handling
 function getSupabaseErrorMessage(message) {
+    if (!message) return 'An unknown error occurred. Please try again.';
+    
     if (message.includes('User already registered')) {
         return 'This email is already registered. Please sign in or use a different email.';
     } else if (message.includes('Invalid email')) {
@@ -263,10 +231,21 @@ function getSupabaseErrorMessage(message) {
     } else if (message.includes('Password should be at least')) {
         return 'Password should be at least 8 characters.';
     } else if (message.includes('OAuth')) {
-        return 'Google sign-in was canceled or failed.';
+        return 'Google sign-in was canceled or failed. Please try again.';
     } else if (message.includes('Network')) {
         return 'Network error. Please check your internet connection.';
+    } else if (message.includes('duplicate key value violates unique constraint')) {
+        return 'This email is already registered. Please sign in.';
     } else {
-        return 'An error occurred. Please try again.';
+        return message.length > 100 ? 'An error occurred. Please try again.' : message;
     }
 }
+
+// Check if user is already logged in
+async function checkAuthState() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) window.location.href = 'profile.html';
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', checkAuthState);
