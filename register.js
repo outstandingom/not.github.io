@@ -1,6 +1,8 @@
-// Initialize Supabase client
+// Supabase configuration
 const supabaseUrl = 'https://xwjalnofppcadadjxnaj.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3amFsbm9mcHBjYWRhZGp4bmFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTU0MDksImV4cCI6MjA2NDg5MTQwOX0.e6tpjy9YdaKD7dxGZkFy_gmFtol4VhZ2bMddwU2M8wA';
+
+// Initialize Supabase
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
 // DOM Elements
@@ -40,7 +42,7 @@ confirmPasswordToggle.addEventListener('click', function() {
 });
 
 function togglePasswordVisibility(inputElement, toggleElement) {
-    const type = inputElement.getAttribute('type') ==='password' ? 'text' : 'password';
+    const type = inputElement.getAttribute('type') === 'password' ? 'text' : 'password';
     inputElement.setAttribute('type', type);
     const icon = toggleElement.querySelector('i');
     icon.classList.toggle('fa-eye');
@@ -174,7 +176,7 @@ registerForm.addEventListener('submit', async function(e) {
     const password = passwordInput.value;
     
     try {
-        // Create user with Supabase Authentication
+        // Sign up user with Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: email,
             password: password,
@@ -186,39 +188,32 @@ registerForm.addEventListener('submit', async function(e) {
             }
         });
         
-        if (authError) {
-            throw authError;
-        }
+        if (authError) throw authError;
         
-        // Save additional user data to Supabase database
-        const { data: userData, error: userError } = await supabase
+        // Save additional user data to Supabase
+        const { error: dbError } = await supabase
             .from('users')
             .insert([
                 { 
                     id: authData.user.id,
-                    email: email,
                     full_name: fullName,
                     phone: phone,
-                    created_at: new Date().toISOString(),
-                    role: 'customer'
+                    email: email,
+                    role: 'customer',
+                    created_at: new Date().toISOString()
                 }
             ]);
         
-        if (userError) {
-            throw userError;
-        }
+        if (dbError) throw dbError;
         
         // Show success message
         successMessage.textContent = 'Account created successfully! Please check your email to verify your account.';
         successMessage.style.display = 'block';
         firebaseError.style.display = 'none';
         
-        // Reset form
-        registerForm.reset();
-        
-        // Redirect to login page after 3 seconds
+        // Redirect to profile page after 3 seconds
         setTimeout(() => {
-            window.location.href = 'login.html';
+            window.location.href = 'profile.html';
         }, 3000);
         
     } catch (error) {
@@ -246,6 +241,11 @@ googleSignInBtn.addEventListener('click', async function() {
         
         if (error) throw error;
         
+        // Show success message
+        successMessage.textContent = 'Redirecting to Google sign-in...';
+        successMessage.style.display = 'block';
+        firebaseError.style.display = 'none';
+        
     } catch (error) {
         console.error('Google sign-in error:', error);
         firebaseError.textContent = getSupabaseErrorMessage(error.message);
@@ -255,18 +255,18 @@ googleSignInBtn.addEventListener('click', async function() {
 });
 
 // Helper function to translate Supabase error messages
-function getSupabaseErrorMessage(errorMessage) {
-    if (errorMessage.includes('User already registered')) {
+function getSupabaseErrorMessage(message) {
+    if (message.includes('User already registered')) {
         return 'This email is already registered. Please sign in or use a different email.';
-    } else if (errorMessage.includes('Invalid email')) {
+    } else if (message.includes('Invalid email')) {
         return 'The email address is not valid.';
-    } else if (errorMessage.includes('Password should be at least')) {
+    } else if (message.includes('Password should be at least')) {
         return 'Password should be at least 8 characters.';
-    } else if (errorMessage.includes('OAuth')) {
+    } else if (message.includes('OAuth')) {
         return 'Google sign-in was canceled or failed.';
-    } else if (errorMessage.includes('Network')) {
+    } else if (message.includes('Network')) {
         return 'Network error. Please check your internet connection.';
     } else {
         return 'An error occurred. Please try again.';
     }
-                  }
+}
