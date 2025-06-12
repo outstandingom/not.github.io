@@ -596,9 +596,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="register.js"></script>
-</body>
-</html>
+    <script>
 // Supabase configuration
 const supabaseUrl = 'https://xwjalnofppcadadjxnaj.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3amFsbm9mcHBjYWRhZGp4bmFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkzMTU0MDksImV4cCI6MjA2NDg5MTQwOX0.e6tpjy9YdaKD7dxGZkFy_gmFtol4VhZ2bMddwU2M8wA';
@@ -926,3 +924,7 @@ async function checkAuthState() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) window.location.href = 'profile.html';
 }
+    </script>
+</body>
+</html>
+        
