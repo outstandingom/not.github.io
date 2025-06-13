@@ -817,11 +817,11 @@
                 const user = result.user;
                 
                 // Check if user already exists in Firestore
-                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userDoc = await db.collection('salons').doc(user.uid).get();
                 
                 if (!userDoc.exists) {
                     // Save new user to Firestore
-                    await db.collection('users').doc(user.uid).set({
+                    await db.collection('salons').doc(user.uid).set({
                         fullName: user.displayName || 'Google User',
                         email: user.email,
                         phone: user.phoneNumber || '',
