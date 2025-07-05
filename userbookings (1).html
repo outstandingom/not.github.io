@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCut | My Bookings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #000;
+            --secondary: #777;
+            --light: #f9f9f9;
+            --border: #e0e0e0;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fff;
+            color: var(--primary);
+            padding-bottom: 70px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .logo span {
+            color: var(--secondary);
+        }
+        
+        .booking-header {
+            background-color: var(--light);
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .booking-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .status-confirmed {
+            background-color: rgba(0, 200, 0, 0.1);
+            color: #00a000;
+        }
+        
+        .status-pending {
+            background-color: rgba(255, 165, 0, 0.1);
+            color: #ffa500;
+        }
+        
+        .status-cancelled {
+            background-color: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+        }
+        
+        .booking-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .booking-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .booking-card-header {
+            background-color: var(--light);
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .booking-card-body {
+            padding: 20px;
+        }
+        
+        .booking-detail {
+            margin-bottom: 15px;
+        }
+        
+        .booking-detail-label {
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 5px;
+        }
+        
+        .booking-detail-value {
+            font-size: 16px;
+        }
+        
+        .booking-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .btn-outline-dark {
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-dark:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-dark {
+            background-color: var(--primary);
+            border: none;
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: var(--border);
+            margin: 20px 0;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+        }
+        
+        .empty-state i {
+            font-size: 50px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            padding: 12px 0;
+            text-align: center;
+            color: var(--secondary);
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item i {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+        }
+        
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .tab-item {
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab-item.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 24px;
+            }
+            
+            .booking-detail-value {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="sticky-top bg-white shadow-sm">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="logo">Pro<span>Cut</span></div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-bell me-3" style="font-size: 20px;"></i>
+                    <div class="rounded-circle bg-light" style="width: 40px; height: 40px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Booking Page Header -->
+        <div class="booking-header">
+            <div class="container">
+                <h2 class="mb-3">My Bookings</h2>
+                <div class="tab-nav">
+                    <div class="tab-item active">Upcoming</div>
+                    <div class="tab-item">Completed</div>
+                    <div class="tab-item">Cancelled</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container py-4">
+        <!-- Upcoming Booking -->
+        <div class="booking-card">
+            <div class="booking-card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="booking-status status-confirmed">Confirmed</span>
+                    <span class="text-muted ms-2">Booking ID: #PC78945</span>
+                </div>
+                <div class="text-muted">Booked on: 15 Jun 2023</div>
+            </div>
+            <div class="booking-card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1674" alt="Service" class="booking-image">
+                    </div>
+                    <div class="col-md-5">
+                        <h5>Women's Haircut & Styling</h5>
+                        <div class="booking-detail">
+                            <div class="booking-detail-label">Salon</div>
+                            <div class="booking-detail-value">ProCut Premium, Neelbad Rd</div>
+                        </div>
+                        <div class="booking-detail">
+                            <div class="booking-detail-label">Date & Time</div>
+                            <div class="booking-detail-value">20 Jun 2023, 2:00 PM</div>
+                        </div>
+                        <div class="booking-detail">
+                            <div class="booking-detail-label">Professional</div>
+                            <div class="booking-detail-value">Rahul Sharma (Senior Stylist)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex flex-column justify-content-between">
+                        <div class="text-end mb-3">
+                            <div class="booking-detail-label">Total Amount</div>
+                            <div class="h4">₹799</div>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-dark">View Details</button>
+                            <button class="btn btn-outline-dark">Cancel Booking</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Completed Booking -->
+        <div class="booking-card">
+            <div class="booking-card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="booking-status status-confirmed">Completed</span>
+                    <span class="text-muted ms-2">Booking ID: #PC78231</span>
+                </div>
+                <div class="text-muted">Booked on: 5 Jun 2023</div>
+            </div>
+            <div class="booking-card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=1740" alt="Service" class="booking-image">
+                    </div>
+                    <div class="col-md-5">
+                        <h5>Men's Haircut & Shave</h5>
+                        <div class="booking-detail">
+                            <div class="booking-detail-label">Salon</div>
+                            <div class="booking-detail-value">ProCut Premium, Neelbad Rd</div>
+                        </div>
+                        <div class="booking-detail">
+                            <div class="booking-detail-label">Date & Time</div>
+                            <div class="booking-detail-value">10 Jun 2023, 11:00 AM</div>
+                        </div>
+                        <div class="booking-detail">
+                            <div class="booking-detail-label">Professional</div>
+                            <div class="booking-detail-value">Priya Patel (Master Barber)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 d-flex flex-column justify-content-between">
+                        <div class="text-end mb-3">
+                            <div class="booking-detail-label">Total Amount</div>
+                            <div class="h4">₹499</div>
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-dark">View Details</button>
+                            <button class="btn btn-outline-dark">Book Again</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Empty State (for demonstration) -->
+        <!-- <div class="empty-state">
+            <i class="far fa-calendar-check"></i>
+            <h4>No Upcoming Bookings</h4>
+            <p class="text-muted">You don't have any upcoming appointments. Book a service now!</p>
+            <button class="btn btn-dark px-4">Book Now</button>
+        </div> -->
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav d-md-none">
+        <div class="container d-flex justify-content-around">
+            <a href="index.html" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span class="nav-text">Home</span>
+            </a>
+
+            <a href="#" class="nav-item active">
+                <i class="fas fa-calendar"></i>
+                <span class="nav-text">Bookings</span>
+            </a>
+            <a href="userprofile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span class="nav-text">Profile</span>
+            </a>
+        </div>
+    </nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // In a real app, this would load the appropriate bookings
+                console.log('Switched to tab:', this.textContent);
+            });
+        });
+        
+        // Booking cancellation confirmation
+        document.querySelectorAll('.btn-outline-dark').forEach(btn => {
+            if(btn.textContent.includes('Cancel')) {
+                btn.addEventListener('click', function(e) {
+                    if(confirm('Are you sure you want to cancel this booking?')) {
+                        alert('Booking cancelled successfully');
+                        // In a real app, this would call an API to cancel
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
