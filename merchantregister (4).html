@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCut | Become a Merchant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #000;
+            --secondary: #8a6d3b;
+            --light: #f9f9f9;
+            --accent: #ff6b6b;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fff;
+            color: var(--primary);
+            padding-bottom: 70px;
+        }
+        
+        .merchant-header {
+            background-color: var(--light);
+            padding: 20px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .merchant-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .merchant-card-title {
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-control, .form-select {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .salon-image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            display: none;
+            margin-bottom: 15px;
+        }
+        
+        .upload-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--light);
+            border: 1px dashed #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .service-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .service-details {
+            flex: 1;
+        }
+        
+        .remove-service {
+            color: #ff6b6b;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            padding: 12px 0;
+            text-align: center;
+            color: #777;
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item i {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="sticky-top bg-white shadow-sm">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="logo">Pro<span>Cut</span></div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-arrow-left me-3" style="font-size: 20px; cursor: pointer;" onclick="history.back()"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Merchant Header -->
+        <div class="merchant-header">
+            <div class="container">
+                <h2 class="mb-3">Become a Merchant</h2>
+                <p class="text-muted">Register your salon to start accepting bookings from customers.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container py-4">
+        <form id="merchantRegistrationForm">
+            <!-- Salon Information -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title">Salon Information</h5>
+                
+                <div class="mb-3">
+                    <label for="salonName" class="form-label">Salon Name</label>
+                    <input type="text" class="form-control" id="salonName" placeholder="Enter salon name" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="salonDescription" class="form-label">Description</label>
+                    <textarea class="form-control" id="salonDescription" rows="3" placeholder="Describe your salon and services"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="salonAddress" class="form-label">Address</label>
+                    <textarea class="form-control" id="salonAddress" rows="2" placeholder="Full address of your salon" required></textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="salonCity" class="form-label">City</label>
+                        <input type="text" class="form-control" id="salonCity" placeholder="City" required>
+                    </div>
+                    <div class="col-md-6">
+                   < label for="mapLink">Enter your Google Maps location link:</label><br><br>
+    <input type="url" id="mapLink" name="mapLink" placeholder="https://maps.app.goo.gl/..." required style="width: 100%; max-width: 400px;"><br><br>
+    <button type="submit">Submit</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Salon Images -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title">Salon Images</h5>
+                
+                <img id="salonImagePreview" class="salon-image-preview" alt="Salon preview">
+                
+                <label for="salonImageUplink" class="-btn">
+                    <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                    <div>Upload Salon Image</div>
+                    <small class="text-muted">Recommended size: 800x600px</small>
+                </label>
+                <input type="url" id="salonImagelink" accept="image/*" style="display: none;">
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title">Contact Information</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="contactName" class="form-label">Contact Person</label>
+                        <input type="text" class="form-control" id="contactName" placeholder="Name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="contactPhone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="contactPhone" placeholder="Phone" required>
+                    </div>
+                </div>
+                
+                <label for="contactEmail" class="form-label">Email</label>
+                <input type="email" class="form-control" id="contactEmail" placeholder="Email" required>
+            </div>
+            
+            <!-- Business Hours -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title">Business Hours</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="openingTime" class="form-label">Opening Time</label>
+                        <select class="form-select" id="openingTime" required>
+                            <option value="08:00">8:00 AM</option>
+                            <option value="09:00">9:00 AM</option>
+                            <option value="10:00" selected>10:00 AM</option>
+                            <option value="11:00">11:00 AM</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="closingTime" class="form-label">Closing Time</label>
+                        <select class="form-select" id="closingTime" required>
+                            <option value="18:00">6:00 PM</option>
+                            <option value="19:00">7:00 PM</option>
+                            <option value="20:00" selected>8:00 PM</option>
+                            <option value="21:00">9:00 PM</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="sundayClosed" checked>
+                    <label class="form-check-label" for="sundayClosed">
+                        Closed on Sundays
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Services Offered -->
+
+            <div class="merchant-card">
+    <h5 class="merchant-card-title">Services Offered</h5>
+    
+    <div id="servicesList">
+        <!-- Services will be added here dynamically -->
+    </div>
+    
+    <div class="service-input-form mt-3" id="serviceInputForm" style="display: none;">
+        <div class="row g-2">
+            <div class="col-md-6">
+                <input type="text" class="form-control" id="serviceNameInput" placeholder="Service name (e.g. Haircut)">
+            </div>
+            <div class="col-md-4">
+                <input type="number" class="form-control" id="servicePriceInput" placeholder="Price (e.g. 50)">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-success w-100" id="saveServiceBtn">
+                    <i class="fas fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <button type="button" class="btn btn-outline-secondary w-100 mt-3" id="addServiceBtn">
+        <i class="fas fa-plus me-2"></i> Add Service
+    </button>
+            </div>
+            
+            <!-- Terms & Conditions -->
+            <div class="merchant-card">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="termsAgree" required>
+                    <label class="form-check-label" for="termsAgree">
+                        I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Merchant Agreement</a>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary w-100 py-3" id="registerMerchantBtn">
+                Register as Merchant
+            </button>
+        </form>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav d-md-none">
+        <div class="container d-flex justify-content-around">
+            <a href="index.html" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="userbookings.html" class="nav-item">
+                <i class="fas fa-calendar"></i>
+                <span class="nav-text">Bookings</span>
+            </a>
+            <a href="userprofile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span class="nav-text">Profile</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Main JS -->
+    <script src="main.js"></script>
+    
+    <script>
+        // Salon image preview
+        document.getElementById('salonImageUpload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const preview = document.getElementById('salonImagePreview');
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Add service button
+        document.getElementById('addServiceBtn').addEventListener('click', function() {
+            const serviceId = 'service-' + Date.now();
+            const serviceItem = document.createElement('div');
+            serviceItem.className = 'service-item';
+            serviceItem.id = serviceId;
+            serviceItem.innerHTML = `
+                <div class="service-details">
+                    <input type="text" class="form-control mb-2" placeholder="Service name" required>
+                    <div class="row">
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Price (₹)" required>
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" placeholder="Duration (mins)" required>
+                        </div>
+                    </div>
+                </div>
+                <i class="fas fa-times remove-service" data-service-id="${serviceId}"></i>
+            `;
+            
+            document.getElementById('servicesList').appendChild(serviceItem);
+            
+            // Add event listener to remove button
+            serviceItem.querySelector('.remove-service').addEventListener('click', function() {
+                document.getElementById(this.getAttribute('data-service-id')).remove();
+            });
+        });
+        
+        // Merchant registration form
+        document.getElementById('merchantRegistrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate form
+            if (!document.getElementById('termsAgree').checked) {
+                alert('Please agree to the Terms & Conditions');
+                return;
+            }
+            
+            if (document.getElementById('servicesList').children.length === 0) {
+                alert('Please add at least one service');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('registerMerchantBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registering...';
+            
+            // In a real app, this would upload images to Firebase Storage
+            // and save all data to Firestore
+            setTimeout(() => {
+                alert('Merchant registration successful! Redirecting to dashboard...');
+                window.location.href = 'merchantdashboard.html';
+            }, 2000);
+        });
+    </script>
+</body>
+  </html>
