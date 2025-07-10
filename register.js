@@ -278,3 +278,13 @@
                     return 'An error occurred. Please try again.';
             }
                           }
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        const userName = user.displayName || user.email.split('@')[0];
+        showNotification(`Welcome ${userName}! Redirecting...`, true);
+        
+        setTimeout(() => {
+            window.location.href = 'profile.html';
+        }, 2000);
+    }
+});
