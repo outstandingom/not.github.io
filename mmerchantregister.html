@@ -120,6 +120,37 @@
             transform: scale(1.1);
         }
         
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            padding: 12px 0;
+            text-align: center;
+            color: #777;
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item i {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+        }
+        
         .progress-container {
             position: fixed;
             top: 0;
@@ -177,6 +208,24 @@
             border-left-color: var(--accent);
         }
         
+        .map-preview {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            margin-top: 10px;
+            border: 1px dashed #ddd;
+        }
+        
+        .map-preview i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
         .success-modal {
             position: fixed;
             top: 0;
@@ -228,25 +277,26 @@
             color: #777;
             margin-bottom: 25px;
         }
-
-        /* FIX: Completely hide service input form when not visible */
-        .service-input-form {
-            display: none;
-            margin-top: 15px;
+        
+        .category-badge {
+            background-color: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 5px 12px;
+            margin: 2px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
         
-        .service-input-form.visible {
-            display: block;
-        }
-
-        /* FIX: Remove any browser validation styling */
-        .service-input-form input:invalid {
-            box-shadow: none;
-            border-color: #ddd;
+        .category-badge.active {
+            background-color: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
         }
         
-        .service-input-form input:required {
-            box-shadow: none;
+        .service-category {
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -277,7 +327,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div class="logo">Pro<span>Cut</span></div>
                 <div class="d-flex align-items-center">
-                    <i class="fas fa-arrow-left me-3" style="font-size: 20px; cursor: pointer;" onclick="window.location.href = 'index.html'"></i>
+                    <i class="fas fa-arrow-left me-3" style="font-size: 20px; cursor: pointer;" onclick="window.location.href = 'profile.html'"></i>
                 </div>
             </div>
         </div>
@@ -293,57 +343,47 @@
 
     <!-- Main Content -->
     <div class="container py-4">
-        <form id="merchantRegistrationForm" novalidate>
+        <form id="merchantRegistrationForm">
             <!-- Salon Information -->
             <div class="merchant-card">
                 <h5 class="merchant-card-title"><i class="fas fa-store me-2"></i>Salon Information</h5>
                 
                 <div class="mb-3">
                     <label for="salonName" class="form-label">Salon Name *</label>
-                    <input type="text" class="form-control" id="salonName" name="salonName" placeholder="Enter salon name" required>
+                    <input type="text" class="form-control" id="salonName" placeholder="Enter salon name" required>
                 </div>
-
+                
                 <div class="mb-3">
                     <label for="ownerName" class="form-label">Owner Name *</label>
-                    <input type="text" class="form-control" id="ownerName" name="ownerName" placeholder="Enter owner's name" required>
+                    <input type="text" class="form-control" id="ownerName" placeholder="Enter owner name" required>
                 </div>
                 
                 <div class="mb-3">
                     <label for="salonDescription" class="form-label">Description</label>
-                    <textarea class="form-control" id="salonDescription" name="salonDescription" rows="3" placeholder="Describe your salon and services"></textarea>
+                    <textarea class="form-control" id="salonDescription" rows="3" placeholder="Describe your salon and services"></textarea>
                 </div>
                 
                 <div class="mb-3">
                     <label for="salonAddress" class="form-label">Address *</label>
-                    <textarea class="form-control" id="salonAddress" name="salonAddress" rows="2" placeholder="Full address of your salon" required></textarea>
+                    <textarea class="form-control" id="salonAddress" rows="2" placeholder="Full address of your salon" required></textarea>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6">
                         <label for="salonCity" class="form-label">City *</label>
-                        <select class="form-select" id="salonCity" name="salonCity" required>
-                            <option value="">Select City</option>
-                            <option value="Mumbai">Mumbai</option>
-                            <option value="Delhi">Delhi</option>
-                            <option value="Bangalore">Bangalore</option>
-                            <option value="Hyderabad">Hyderabad</option>
-                            <option value="Chennai">Chennai</option>
-                            <option value="Kolkata">Kolkata</option>
-                            <option value="Pune">Pune</option>
-                            <option value="Ahmedabad">Ahmedabad</option>
-                            <option value="Bhopal">Bhopal</option>
-                            <option value="Indore">Indore</option>
-                        </select>
+                        <input type="text" class="form-control" id="salonCity" placeholder="City" required>
                     </div>
                     <div class="col-md-6">
-                        <label for="contactPhone" class="form-label">Phone Number *</label>
-                        <input type="tel" class="form-control" id="contactPhone" name="contactPhone" placeholder="+91 9876543210" required>
+                        <label for="mapLink" class="form-label">Google Maps Location Link</label>
+                        <input type="url" class="form-control" id="mapLink" name="mapLink" placeholder="https://maps.app.goo.gl/...">
                     </div>
                 </div>
-
-                <div class="mb-3">
-                    <label for="contactEmail" class="form-label">Email *</label>
-                    <input type="email" class="form-control" id="contactEmail" name="contactEmail" placeholder="salon@example.com" required>
+                
+                <div id="mapPreview" class="map-preview">
+                    <div class="text-center">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <p class="mt-2">Map preview will appear here</p>
+                    </div>
                 </div>
             </div>
             
@@ -358,7 +398,23 @@
                     <div>Enter Salon Image URL</div>
                     <small class="text-muted">Example: https://images.unsplash.com/photo-1560066984-138dadb4c035</small>
                 </label>
-                <input type="url" class="form-control" id="salonImageUrl" name="salonImageUrl" placeholder="Paste image URL here">
+                <input type="url" class="form-control" id="salonImageUrl" placeholder="Paste image URL here">
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title"><i class="fas fa-id-card me-2"></i>Contact Information</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="contactPhone" class="form-label">Phone Number *</label>
+                        <input type="tel" class="form-control" id="contactPhone" placeholder="Phone" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="contactEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="contactEmail" placeholder="Email">
+                    </div>
+                </div>
             </div>
             
             <!-- Business Hours -->
@@ -368,28 +424,28 @@
                 <div class="row">
                     <div class="col-md-6">
                         <label for="openingTime" class="form-label">Opening Time *</label>
-                        <select class="form-select" id="openingTime" name="openingTime" required>
+                        <select class="form-select" id="openingTime" required>
                             <option value="">Select time</option>
                             <option value="08:00">8:00 AM</option>
                             <option value="09:00">9:00 AM</option>
-                            <option value="10:00">10:00 AM</option>
+                            <option value="10:00" selected>10:00 AM</option>
                             <option value="11:00">11:00 AM</option>
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label for="closingTime" class="form-label">Closing Time *</label>
-                        <select class="form-select" id="closingTime" name="closingTime" required>
+                        <select class="form-select" id="closingTime" required>
                             <option value="">Select time</option>
                             <option value="18:00">6:00 PM</option>
                             <option value="19:00">7:00 PM</option>
-                            <option value="20:00">8:00 PM</option>
+                            <option value="20:00" selected>8:00 PM</option>
                             <option value="21:00">9:00 PM</option>
                         </select>
                     </div>
                 </div>
                 
                 <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" id="sundayClosed" name="sundayClosed" checked>
+                    <input class="form-check-input" type="checkbox" id="sundayClosed" checked>
                     <label class="form-check-label" for="sundayClosed">
                         Closed on Sundays
                     </label>
@@ -400,54 +456,82 @@
             <div class="merchant-card">
                 <h5 class="merchant-card-title"><i class="fas fa-scissors me-2"></i>Services Offered</h5>
                 
-                <div id="servicesList">
-                    <div class="alert alert-info">
-                        No services added yet. Click "Add Service" to get started.
+                <!-- Service Categories -->
+                <div class="mb-4">
+                    <label class="form-label">Select Service Categories</label>
+                    <div id="serviceCategories" class="d-flex flex-wrap">
+                        <!-- Categories will be populated by JavaScript -->
                     </div>
                 </div>
                 
-                <!-- FIXED: Service input form WITHOUT required attributes -->
-                <div class="service-input-form" id="serviceInputForm">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <input type="text" class="form-control" id="serviceNameInput" placeholder="Service name (e.g. Haircut)">
+                <!-- Custom Services -->
+                <div class="mb-3">
+                    <label class="form-label">Add Custom Services</label>
+                    <div id="servicesList">
+                        <div class="alert alert-info">
+                            No custom services added yet. Add services below.
                         </div>
-                        <div class="col-md-4">
-                            <input type="number" class="form-control" id="servicePriceInput" placeholder="Price (e.g. 50)" min="1">
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-success w-100" id="saveServiceBtn">
-                                <i class="fas fa-check"></i>
-                            </button>
+                    </div>
+                    
+                    <div class="service-input-form mt-3" id="serviceInputForm">
+                        <div class="row g-2">
+                            <div class="col-md-5">
+                                <input type="text" class="form-control" id="serviceNameInput" placeholder="Service name (e.g. Haircut)">
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" class="form-control" id="servicePriceInput" placeholder="Price (e.g. 50)" min="1">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="serviceCategoryInput">
+                                    <option value="hair">Hair</option>
+                                    <option value="beard">Beard & Mustache</option>
+                                    <option value="skin">Skin & Facial</option>
+                                    <option value="spa">Spa & Massage</option>
+                                    <option value="makeup">Makeup</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-success w-100" id="saveServiceBtn">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <button type="button" class="btn btn-outline-secondary w-100 mt-3" id="addServiceBtn">
-                    <i class="fas fa-plus me-2"></i> Add Service
-                </button>
             </div>
-
+            
             <!-- Price Range -->
             <div class="merchant-card">
                 <h5 class="merchant-card-title"><i class="fas fa-tag me-2"></i>Price Range</h5>
                 
                 <div class="row">
                     <div class="col-md-6">
-                        <label for="minPrice" class="form-label">Minimum Price (₹) *</label>
-                        <input type="number" class="form-control" id="minPrice" name="minPrice" placeholder="200" min="0" required>
+                        <label for="minPrice" class="form-label">Minimum Price (₹)</label>
+                        <input type="number" class="form-control" id="minPrice" placeholder="0" min="0">
                     </div>
                     <div class="col-md-6">
-                        <label for="maxPrice" class="form-label">Maximum Price (₹) *</label>
-                        <input type="number" class="form-control" id="maxPrice" name="maxPrice" placeholder="1500" min="0" required>
+                        <label for="maxPrice" class="form-label">Maximum Price (₹)</label>
+                        <input type="number" class="form-control" id="maxPrice" placeholder="1000" min="0">
                     </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label for="priceRange" class="form-label">Price Range Label</label>
+                    <select class="form-select" id="priceRange">
+                        <option value="">Select price range</option>
+                        <option value="Budget">Budget (₹0-₹300)</option>
+                        <option value="Affordable">Affordable (₹300-₹600)</option>
+                        <option value="Premium">Premium (₹600-₹1000)</option>
+                        <option value="Luxury">Luxury (₹1000+)</option>
+                    </select>
                 </div>
             </div>
             
             <!-- Terms & Conditions -->
             <div class="merchant-card">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="termsAgree" name="termsAgree" required>
+                    <input class="form-check-input" type="checkbox" id="termsAgree" required>
                     <label class="form-check-label" for="termsAgree">
                         I agree to the <a href="#" class="text-decoration-none">Terms & Conditions</a> and <a href="#" class="text-decoration-none">Merchant Agreement</a>
                     </label>
@@ -463,25 +547,44 @@
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script>
-        // Backend API URL
-        const API_BASE_URL = 'http://localhost:5000';
+        // Supabase configuration - Replace with your own config
+        const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+        const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+        
+        // Initialize Supabase client
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // DOM elements
         const progressBar = document.getElementById('progressBar');
         const toastContainer = document.getElementById('toastContainer');
         const form = document.getElementById('merchantRegistrationForm');
-        const addServiceBtn = document.getElementById('addServiceBtn');
         const saveServiceBtn = document.getElementById('saveServiceBtn');
-        const serviceInputForm = document.getElementById('serviceInputForm');
         const servicesList = document.getElementById('servicesList');
+        const serviceCategories = document.getElementById('serviceCategories');
         const salonImageUrl = document.getElementById('salonImageUrl');
         const salonImagePreview = document.getElementById('salonImagePreview');
+        const mapLink = document.getElementById('mapLink');
+        const mapPreview = document.getElementById('mapPreview');
         const successModal = document.getElementById('successModal');
         const continueBtn = document.getElementById('continueBtn');
 
-        // Services array
-        let services = [];
+        // Services arrays
+        let selectedCategories = [];
+        let customServices = [];
+
+        // Service categories data
+        const categories = [
+            { id: 'hair', name: 'Hair Services', services: ['Haircut', 'Hair Coloring', 'Hair Treatment', 'Hair Styling'] },
+            { id: 'beard', name: 'Beard & Mustache', services: ['Beard Trim', 'Beard Styling', 'Mustache Trim'] },
+            { id: 'skin', name: 'Skin & Facial', services: ['Facial', 'Cleanup', 'Bleach'] },
+            { id: 'spa', name: 'Spa & Massage', services: ['Head Massage', 'Body Massage', 'Spa'] },
+            { id: 'makeup', name: 'Makeup', services: ['Bridal Makeup', 'Party Makeup', 'Basic Makeup'] }
+        ];
 
         // Show toast notification
         function showToast(message, isError = false) {
@@ -503,12 +606,14 @@
             
             toastContainer.appendChild(toast);
             
+            // Initialize Bootstrap toast
             const bsToast = new bootstrap.Toast(toast, {
                 autohide: true,
                 delay: 3000
             });
             bsToast.show();
             
+            // Remove toast after it hides
             toast.addEventListener('hidden.bs.toast', () => {
                 toast.remove();
             });
@@ -519,71 +624,118 @@
             progressBar.style.width = `${percent}%`;
         }
 
-        // Toggle service form
-        addServiceBtn.addEventListener('click', () => {
-            serviceInputForm.classList.add('visible');
-            addServiceBtn.style.display = 'none';
-            document.getElementById('serviceNameInput').focus();
-        });
+        // Initialize service categories
+        function initializeCategories() {
+            categories.forEach(category => {
+                const badge = document.createElement('span');
+                badge.className = 'category-badge';
+                badge.textContent = category.name;
+                badge.setAttribute('data-id', category.id);
+                
+                badge.addEventListener('click', () => {
+                    badge.classList.toggle('active');
+                    const categoryId = badge.getAttribute('data-id');
+                    
+                    if (badge.classList.contains('active')) {
+                        selectedCategories.push(categoryId);
+                    } else {
+                        selectedCategories = selectedCategories.filter(id => id !== categoryId);
+                    }
+                });
+                
+                serviceCategories.appendChild(badge);
+            });
+        }
 
-        // Save service
+        // Save custom service
         saveServiceBtn.addEventListener('click', () => {
             const name = document.getElementById('serviceNameInput').value.trim();
             const price = document.getElementById('servicePriceInput').value;
+            const category = document.getElementById('serviceCategoryInput').value;
             
             if (!name || !price) {
                 showToast('Please fill in both service name and price', true);
                 return;
             }
             
-            if (parseFloat(price) <= 0) {
-                showToast('Price must be greater than 0', true);
-                return;
-            }
-            
+            // Create service object
             const service = {
                 id: Date.now().toString(),
                 name: name,
                 price: parseFloat(price),
-                category: 'custom'
+                category: category,
+                is_custom: true
             };
             
-            services.push(service);
-            renderServices();
+            // Add to custom services array
+            customServices.push(service);
             
+            // Update services list
+            renderCustomServices();
+            
+            // Reset form
             document.getElementById('serviceNameInput').value = '';
             document.getElementById('servicePriceInput').value = '';
-            serviceInputForm.classList.remove('visible');
-            addServiceBtn.style.display = 'block';
         });
 
-        // Render services list
-        function renderServices() {
-            if (services.length === 0) {
-                servicesList.innerHTML = '<div class="alert alert-info">No services added yet. Click "Add Service" to get started.</div>';
+        // Render custom services list
+        function renderCustomServices() {
+            if (customServices.length === 0) {
+                servicesList.innerHTML = '<div class="alert alert-info">No custom services added yet. Add services above.</div>';
                 return;
             }
             
             servicesList.innerHTML = '';
             
-            services.forEach(service => {
+            customServices.forEach(service => {
                 const serviceItem = document.createElement('div');
                 serviceItem.className = 'service-item';
                 serviceItem.innerHTML = `
                     <div class="service-details">
                         <div class="fw-bold">${service.name}</div>
-                        <div>₹${service.price.toFixed(2)}</div>
+                        <div>₹${service.price.toFixed(2)} • ${service.category}</div>
                     </div>
                     <i class="fas fa-times remove-service" data-id="${service.id}"></i>
                 `;
                 servicesList.appendChild(serviceItem);
                 
+                // Add event listener to remove button
                 serviceItem.querySelector('.remove-service').addEventListener('click', (e) => {
                     const id = e.target.getAttribute('data-id');
-                    services = services.filter(s => s.id !== id);
-                    renderServices();
+                    customServices = customServices.filter(s => s.id !== id);
+                    renderCustomServices();
                 });
             });
+        }
+
+        // Generate services from selected categories
+        function generateServicesFromCategories() {
+            const services = [];
+            
+            selectedCategories.forEach(categoryId => {
+                const category = categories.find(cat => cat.id === categoryId);
+                if (category) {
+                    category.services.forEach(serviceName => {
+                        // Generate a default price based on category
+                        const defaultPrices = {
+                            'hair': 300,
+                            'beard': 150,
+                            'skin': 400,
+                            'spa': 600,
+                            'makeup': 800
+                        };
+                        
+                        services.push({
+                            name: serviceName,
+                            category: categoryId,
+                            price: defaultPrices[categoryId] || 200,
+                            is_custom: false
+                        });
+                    });
+                }
+            });
+            
+            return services;
         }
 
         // Preview salon image
@@ -597,115 +749,85 @@
             }
         });
 
-        // Custom form validation
-        function validateForm() {
-            const salonName = document.getElementById('salonName').value.trim();
-            const ownerName = document.getElementById('ownerName').value.trim();
-            const address = document.getElementById('salonAddress').value.trim();
-            const city = document.getElementById('salonCity').value;
-            const phone = document.getElementById('contactPhone').value.trim();
-            const email = document.getElementById('contactEmail').value.trim();
-            const minPrice = document.getElementById('minPrice').value;
-            const maxPrice = document.getElementById('maxPrice').value;
-            const openingTime = document.getElementById('openingTime').value;
-            const closingTime = document.getElementById('closingTime').value;
-            const termsAgree = document.getElementById('termsAgree').checked;
-
-            if (!salonName) {
-                showToast('Salon name is required', true);
-                document.getElementById('salonName').focus();
-                return false;
+        // Preview map location
+        mapLink.addEventListener('input', () => {
+            const url = mapLink.value.trim();
+            if (url) {
+                mapPreview.innerHTML = `
+                    <iframe 
+                        src="https://maps.google.com/maps?q=${encodeURIComponent(url)}&output=embed" 
+                        width="100%" 
+                        height="100%" 
+                        style="border:0; border-radius: 8px;" 
+                        allowfullscreen="" 
+                        loading="lazy">
+                    </iframe>
+                `;
+            } else {
+                mapPreview.innerHTML = `
+                    <div class="text-center">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <p class="mt-2">Map preview will appear here</p>
+                    </div>
+                `;
             }
-
-            if (!ownerName) {
-                showToast('Owner name is required', true);
-                document.getElementById('ownerName').focus();
-                return false;
-            }
-
-            if (!address) {
-                showToast('Address is required', true);
-                document.getElementById('salonAddress').focus();
-                return false;
-            }
-
-            if (!city) {
-                showToast('City is required', true);
-                document.getElementById('salonCity').focus();
-                return false;
-            }
-
-            if (!phone) {
-                showToast('Phone number is required', true);
-                document.getElementById('contactPhone').focus();
-                return false;
-            }
-
-            if (!email) {
-                showToast('Email is required', true);
-                document.getElementById('contactEmail').focus();
-                return false;
-            }
-
-            if (!openingTime || !closingTime) {
-                showToast('Business hours are required', true);
-                return false;
-            }
-
-            if (!minPrice || !maxPrice) {
-                showToast('Price range is required', true);
-                return false;
-            }
-
-            if (parseFloat(minPrice) >= parseFloat(maxPrice)) {
-                showToast('Maximum price must be greater than minimum price', true);
-                return false;
-            }
-
-            if (services.length === 0) {
-                showToast('Please add at least one service', true);
-                return false;
-            }
-
-            if (!termsAgree) {
-                showToast('Please agree to the Terms & Conditions', true);
-                return false;
-            }
-
-            return true;
-        }
+        });
 
         // Form submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // Show progress
             updateProgress(10);
             
-            if (!validateForm()) {
+            // Validate form
+            if (!document.getElementById('termsAgree').checked) {
+                showToast('Please agree to the Terms & Conditions', true);
                 updateProgress(0);
                 return;
             }
             
+            const categoryServices = generateServicesFromCategories();
+            const allServices = [...categoryServices, ...customServices];
+            
+            if (allServices.length === 0) {
+                showToast('Please select at least one service category or add custom services', true);
+                updateProgress(0);
+                return;
+            }
+            
+            // Calculate price range if not set
+            let minPrice = document.getElementById('minPrice').value;
+            let maxPrice = document.getElementById('maxPrice').value;
+            
+            if (!minPrice || !maxPrice) {
+                const prices = allServices.map(s => s.price);
+                minPrice = Math.min(...prices);
+                maxPrice = Math.max(...prices);
+            }
+            
+            // Get form data
             const salonData = {
-                salonName: document.getElementById('salonName').value.trim(),
-                ownerName: document.getElementById('ownerName').value.trim(),
-                description: document.getElementById('salonDescription').value.trim(),
-                address: document.getElementById('salonAddress').value.trim(),
+                salonName: document.getElementById('salonName').value,
+                ownerName: document.getElementById('ownerName').value,
+                description: document.getElementById('salonDescription').value,
+                address: document.getElementById('salonAddress').value,
                 city: document.getElementById('salonCity').value,
-                phone: document.getElementById('contactPhone').value.trim(),
-                email: document.getElementById('contactEmail').value.trim(),
-                imageUrl: document.getElementById('salonImageUrl').value.trim() || null,
-                services: services,
-                priceRange: `₹${document.getElementById('minPrice').value} - ₹${document.getElementById('maxPrice').value}`,
-                minPrice: parseInt(document.getElementById('minPrice').value),
-                maxPrice: parseInt(document.getElementById('maxPrice').value),
+                phone: document.getElementById('contactPhone').value,
+                email: document.getElementById('contactEmail').value,
+                services: allServices,
+                priceRange: document.getElementById('priceRange').value,
+                minPrice: parseFloat(minPrice),
+                maxPrice: parseFloat(maxPrice),
+                imageUrl: document.getElementById('salonImageUrl').value,
                 businessHours: {
                     opening: document.getElementById('openingTime').value,
                     closing: document.getElementById('closingTime').value,
                     closedOnSunday: document.getElementById('sundayClosed').checked
                 }
             };
-            
+
+            // Show loading state
             const submitBtn = document.getElementById('registerMerchantBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Registering...';
@@ -713,7 +835,8 @@
             updateProgress(30);
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/registerSalon`, {
+                // Send data to your backend API
+                const response = await fetch('http://localhost:5000/api/registerSalon', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -721,22 +844,20 @@
                     body: JSON.stringify(salonData)
                 });
                 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-                
                 const result = await response.json();
                 
-                if (!result.success) {
+                if (!response.ok) {
                     throw new Error(result.error || 'Registration failed');
                 }
                 
                 updateProgress(100);
                 
+                // Show success modal after 1 second
                 setTimeout(() => {
                     successModal.classList.add('active');
                 }, 1000);
+                
+                console.log('Registration successful:', result);
                 
             } catch (error) {
                 console.error('Error during registration:', error);
@@ -754,22 +875,21 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            renderServices();
+            // Initialize categories and services
+            initializeCategories();
+            renderCustomServices();
             
-            // Pre-fill demo data
+            // Pre-fill some form data for demo
             document.getElementById('salonName').value = 'Luxury Hair Studio';
-            document.getElementById('ownerName').value = 'Rajesh Kumar';
+            document.getElementById('ownerName').value = 'Sarah Johnson';
             document.getElementById('salonDescription').value = 'Premium hair salon with expert stylists and comfortable atmosphere. Specializing in cuts, coloring, and treatments.';
             document.getElementById('salonAddress').value = '123 Beauty Street, Downtown';
-            document.getElementById('salonCity').value = 'Mumbai';
-            document.getElementById('contactPhone').value = '+91 9876543210';
-            document.getElementById('contactEmail').value = 'salon@example.com';
+            document.getElementById('salonCity').value = 'New York';
+            document.getElementById('contactPhone').value = '555-123-4567';
+            document.getElementById('contactEmail').value = 'sarah@luxuryhairstudio.com';
             document.getElementById('salonImageUrl').value = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800';
-            document.getElementById('minPrice').value = '200';
-            document.getElementById('maxPrice').value = '1500';
-            document.getElementById('openingTime').value = '10:00';
-            document.getElementById('closingTime').value = '20:00';
             
+            // Trigger image preview
             salonImageUrl.dispatchEvent(new Event('input'));
         });
     </script>
