@@ -7,11 +7,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        root {
+        :root {
             --primary: #000;
             --secondary: #8a6d3b;
             --light: #f9f9f9;
             --accent: #ff6b6b;
+            --success: #28a745;
         }
         
         body {
@@ -40,15 +41,18 @@
             display: flex;
             border-bottom: 1px solid #e0e0e0;
             margin-bottom: 20px;
+            overflow-x: auto;
         }
         
         .profile-nav-item {
             padding: 15px;
             text-align: center;
             flex: 1;
+            min-width: 120px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            white-space: nowrap;
         }
         
         .profile-nav-item.active {
@@ -61,6 +65,7 @@
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
         }
         
         .profile-card-title {
@@ -99,6 +104,7 @@
             text-align: center;
             color: #777;
             transition: all 0.3s;
+            text-decoration: none;
         }
         
         .nav-item.active {
@@ -126,7 +132,146 @@
             height: 25px;
         }
 
-        </style>
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.1);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--accent);
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .salon-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .service-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .service-details {
+            flex: 1;
+        }
+        
+        .remove-service {
+            color: #ff6b6b;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        
+        .remove-service:hover {
+            transform: scale(1.1);
+        }
+        
+        .service-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .service-input-group input {
+            flex: 1;
+        }
+        
+        .service-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .merchant-badge {
+            background-color: var(--secondary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        
+        .booking-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .booking-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-confirmed {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .toast {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-left: 4px solid var(--success);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .toast.error {
+            border-left-color: var(--accent);
+        }
+        
+        .map-preview {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            margin-top: 10px;
+            border: 1px dashed #ddd;
+        }
+    </style>
 </head>
 <body>
     <!-- Header Section -->
@@ -143,8 +288,8 @@
         <!-- Profile Header -->
         <div class="profile-header">
             <div class="container text-center">
-                <img src="<a href="https://i.ibb.co/Mx24cY3C/file-000000001fa861f5845ba73818a286a8.png" class="profile-avatar mb-3" alt="Profile" id="profileImage">
-                <h4 id="profileName">Loading...</h4>
+                <img src="https://i.ibb.co/Mx24cY3C/file-000000001fa861f5845ba73818a286a8.png" class="profile-avatar mb-3" alt="Profile" id="profileImage">
+                <h4 id="profileName">Loading... <span id="merchantBadge" class="merchant-badge" style="display: none;">Merchant</span></h4>
                 <p class="text-muted" id="profileEmail">Loading...</p>
             </div>
         </div>
@@ -153,8 +298,10 @@
     <!-- Main Content -->
     <div class="container py-4">
         <div class="profile-nav">
-            <div class="profile-nav-item active">Profile</div>
-            <div class="profile-nav-item">Settings</div>
+            <div class="profile-nav-item active" data-tab="profileTab">Profile</div>
+            <div class="profile-nav-item" data-tab="bookingsTab">Bookings</div>
+            <div class="profile-nav-item" data-tab="salonTab" id="salonTabNav" style="display: none;">My Salon</div>
+            <div class="profile-nav-item" data-tab="settingsTab">Settings</div>
         </div>
         
         <!-- Profile Tab -->
@@ -173,13 +320,111 @@
                 </div>
                 
                 <div class="profile-detail">
+                    <div class="profile-detail-label">Phone</div>
+                    <div class="profile-detail-value" id="profilePhone">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
                     <div class="profile-detail-label">Member Since</div>
                     <div class="profile-detail-value" id="profileJoinDate">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Account Type</div>
+                    <div class="profile-detail-value" id="profileAccountType">Loading...</div>
                 </div>
             </div>
         </div>
         
-        <!-- Settings Tab (hidden by default) -->
+        <!-- Bookings Tab -->
+        <div id="bookingsTab" style="display: none;">
+            <div class="profile-card">
+                <h5 class="profile-card-title">My Bookings</h5>
+                <div id="bookingsList">
+                    <div class="alert alert-info">Loading bookings...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Salon Tab (for merchants only) -->
+        <div id="salonTab" style="display: none;">
+            <div class="profile-card">
+                <h5 class="profile-card-title">Salon Information</h5>
+                
+                <img id="salonImage" class="salon-image" alt="Salon image">
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Salon Name</div>
+                    <div class="profile-detail-value" id="salonName">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Description</div>
+                    <div class="profile-detail-value" id="salonDescription">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Address</div>
+                    <div class="profile-detail-value" id="salonAddress">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">City</div>
+                    <div class="profile-detail-value" id="salonCity">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Business Hours</div>
+                    <div class="profile-detail-value" id="salonHours">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
+                    <div class="profile-detail-label">Contact Information</div>
+                    <div class="profile-detail-value" id="salonContact">Loading...</div>
+                </div>
+                
+                <div id="mapPreview" class="map-preview">
+                    <div class="text-center">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <p class="mt-2">Map preview will appear here</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="profile-card">
+                <h5 class="profile-card-title">Services Offered</h5>
+                
+                <div id="salonServicesList">
+                    <div class="alert alert-info">Loading services...</div>
+                </div>
+                
+                <div class="service-input-group">
+                    <input type="text" class="form-control" id="serviceNameInput" placeholder="Service name (e.g., Haircut)">
+                    <input type="number" class="form-control" id="servicePriceInput" placeholder="Price (₹)" min="1" step="0.01">
+                    <div class="time-input">
+                        <input type="number" class="form-control" id="serviceTimeInput" placeholder="Time" min="5" max="480">
+                        <span>minutes</span>
+                    </div>
+                    <div class="service-actions">
+                        <button type="button" class="btn btn-success" id="addServiceBtn">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary w-100 mt-2" id="manageServicesBtn">
+                    Manage Services
+                </button>
+            </div>
+            
+            <div class="profile-card">
+                <h5 class="profile-card-title">Salon Bookings</h5>
+                <div id="salonBookingsList">
+                    <div class="alert alert-info">Loading salon bookings...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
         <div id="settingsTab" style="display: none;">
             <div class="profile-card">
                 <h5 class="profile-card-title">Account Settings</h5>
@@ -192,12 +437,12 @@
                 </div>
             </div>
             
-                <div class="profile-detail">
-    <h5 class="profile-card-title">Become a merchant, increase your earnings and improve customer experience</h5>
-    <button class="btn btn-outline-secondary w-100" id="registerSalonBtn" onclick="window.location.href='merchantregister.html'">
-        Register Your Salon
-    </button>
-                </div>
+            <div class="profile-card" id="registerSalonCard">
+                <h5 class="profile-card-title">Become a merchant, increase your earnings and improve customer experience</h5>
+                <button class="btn btn-outline-secondary w-100" id="registerSalonBtn">
+                    Register Your Salon
+                </button>
+            </div>
             
             <div class="profile-card">
                 <h5 class="profile-card-title">Session</h5>
@@ -207,6 +452,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <!-- Bottom Navigation -->
     <nav class="bottom-nav d-md-none">
@@ -226,19 +474,579 @@
         </div>
     </nav>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <!-- Main JS -->
-    
-    
-    <script src="profile.js"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
+
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // DOM Elements
+        const profileName = document.getElementById('profileName');
+        const profileEmail = document.getElementById('profileEmail');
+        const profileFullName = document.getElementById('profileFullName');
+        const profileEmailDetail = document.getElementById('profileEmailDetail');
+        const profilePhone = document.getElementById('profilePhone');
+        const profileJoinDate = document.getElementById('profileJoinDate');
+        const profileAccountType = document.getElementById('profileAccountType');
+        const profileImage = document.getElementById('profileImage');
+        const merchantBadge = document.getElementById('merchantBadge');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+        const registerSalonBtn = document.getElementById('registerSalonBtn');
+        const registerSalonCard = document.getElementById('registerSalonCard');
+        const profileNavItems = document.querySelectorAll('.profile-nav-item');
+        const salonTabNav = document.getElementById('salonTabNav');
+        const profileTab = document.getElementById('profileTab');
+        const bookingsTab = document.getElementById('bookingsTab');
+        const salonTab = document.getElementById('salonTab');
+        const settingsTab = document.getElementById('settingsTab');
+        const bookingsList = document.getElementById('bookingsList');
+        const salonServicesList = document.getElementById('salonServicesList');
+        const salonBookingsList = document.getElementById('salonBookingsList');
+        const addServiceBtn = document.getElementById('addServiceBtn');
+        const manageServicesBtn = document.getElementById('manageServicesBtn');
+        const salonImage = document.getElementById('salonImage');
+        const salonName = document.getElementById('salonName');
+        const salonDescription = document.getElementById('salonDescription');
+        const salonAddress = document.getElementById('salonAddress');
+        const salonCity = document.getElementById('salonCity');
+        const salonHours = document.getElementById('salonHours');
+        const salonContact = document.getElementById('salonContact');
+        const mapPreview = document.getElementById('mapPreview');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // Global variables
+        let currentUser = null;
+        let userSalon = null;
+        let userSalonServices = [];
+        let userBookings = [];
+        let salonBookings = [];
+
+        // Show toast notification
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center ${isError ? 'error' : ''}`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Initialize Bootstrap toast
+            const bsToast = new bootstrap.Toast(toast, {
+                autohide: true,
+                delay: 5000
+            });
+            bsToast.show();
+            
+            // Remove toast after it hides
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        // Tab switching functionality
+        profileNavItems.forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all items
+                profileNavItems.forEach(navItem => {
+                    navItem.classList.remove('active');
+                });
+                
+                // Add active class to clicked item
+                this.classList.add('active');
+                
+                // Show the corresponding tab
+                const tabId = this.getAttribute('data-tab');
+                
+                // Hide all tabs
+                profileTab.style.display = 'none';
+                bookingsTab.style.display = 'none';
+                salonTab.style.display = 'none';
+                settingsTab.style.display = 'none';
+                
+                // Show selected tab
+                document.getElementById(tabId).style.display = 'block';
+                
+                // Load data for specific tabs when they're selected
+                if (tabId === 'bookingsTab') {
+                    loadUserBookings();
+                } else if (tabId === 'salonTab' && userSalon) {
+                    loadSalonBookings();
+                }
+            });
+        });
+
+        // Load user profile data
+        async function loadUserProfile() {
+            try {
+                // Get current user session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    // Redirect to login if no session
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                currentUser = session.user;
+                
+                // Get user data from users table
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('auth_uid', session.user.id)
+                    .single();
+                
+                if (userError) {
+                    throw userError;
+                }
+                
+                // Update profile information
+                profileName.textContent = userData.full_name || 'User';
+                profileEmail.textContent = session.user.email;
+                profileFullName.textContent = userData.full_name || 'Not provided';
+                profileEmailDetail.textContent = session.user.email;
+                profilePhone.textContent = userData.phone || 'Not provided';
+                
+                // Format and display join date
+                if (userData.created_at) {
+                    const joinDate = new Date(userData.created_at);
+                    profileJoinDate.textContent = joinDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else {
+                    profileJoinDate.textContent = 'Unknown';
+                }
+                
+                // Check if user is a merchant/salon owner
+                if (userData.role === 'partner' || userData.account_type === 'merchant') {
+                    profileAccountType.textContent = 'Merchant / Salon Owner';
+                    merchantBadge.style.display = 'inline-block';
+                    registerSalonCard.style.display = 'none';
+                    
+                    // Show salon tab
+                    salonTabNav.style.display = 'block';
+                    
+                    // Load salon information
+                    await loadSalonInfo(userData.id);
+                } else {
+                    profileAccountType.textContent = 'Regular User';
+                    merchantBadge.style.display = 'none';
+                    registerSalonCard.style.display = 'block';
+                    salonTabNav.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                profileName.textContent = 'Error loading profile';
+                profileEmail.textContent = 'Please try again later';
+                showToast('Error loading profile data', true);
+            }
+        }
+
+        // Load salon information for merchants
+        async function loadSalonInfo(userId) {
+            try {
+                const { data: salonData, error: salonError } = await supabase
+                    .from('salons')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .single();
+                
+                if (salonError) {
+                    if (salonError.code === 'PGRST116') {
+                        // No salon found for this user
+                        console.log('No salon found for this user');
+                        return;
+                    }
+                    throw salonError;
+                }
+                
+                userSalon = salonData;
+                
+                // Update salon information in the UI
+                if (salonData.image_url) {
+                    salonImage.src = salonData.image_url;
+                } else {
+                    salonImage.style.display = 'none';
+                }
+                
+                salonName.textContent = salonData.name || 'Not provided';
+                salonDescription.textContent = salonData.description || 'No description provided';
+                salonAddress.textContent = salonData.address || 'Not provided';
+                salonCity.textContent = salonData.city || 'Not provided';
+                
+                // Format business hours
+                const openingTime = salonData.opening_time ? salonData.opening_time.substring(0, 5) : '10:00';
+                const closingTime = salonData.closing_time ? salonData.closing_time.substring(0, 5) : '20:00';
+                const closedOnSunday = salonData.closed_on_sunday ? ' (Closed on Sundays)' : '';
+                salonHours.textContent = `${openingTime} - ${closingTime}${closedOnSunday}`;
+                
+                // Format contact information
+                salonContact.textContent = `${salonData.contact_name || 'Not provided'} | ${salonData.contact_phone || 'Not provided'} | ${salonData.contact_email || 'Not provided'}`;
+                
+                // Update map preview if available
+                if (salonData.map_link) {
+                    mapPreview.innerHTML = `
+                        <iframe 
+                            src="https://maps.google.com/maps?q=${encodeURIComponent(salonData.map_link)}&output=embed" 
+                            width="100%" 
+                            height="100%" 
+                            style="border:0; border-radius: 8px;" 
+                            allowfullscreen="" 
+                            loading="lazy">
+                        </iframe>
+                    `;
+                }
+                
+                // Load salon services
+                await loadSalonServices(salonData.id);
+                
+            } catch (error) {
+                console.error('Error loading salon info:', error);
+                showToast('Error loading salon information', true);
+            }
+        }
+
+        // Load salon services
+        async function loadSalonServices(salonId) {
+            try {
+                const { data: services, error: servicesError } = await supabase
+                    .from('salon_services')
+                    .select('*')
+                    .eq('salon_id', salonId)
+                    .order('service_name');
+                
+                if (servicesError) {
+                    throw servicesError;
+                }
+                
+                userSalonServices = services || [];
+                renderSalonServices();
+                
+            } catch (error) {
+                console.error('Error loading salon services:', error);
+                showToast('Error loading salon services', true);
+            }
+        }
+
+        // Render salon services
+        function renderSalonServices() {
+            if (!salonServicesList) return;
+            
+            if (userSalonServices.length === 0) {
+                salonServicesList.innerHTML = '<div class="alert alert-info">No services added yet. Add your first service above.</div>';
+                return;
+            }
+            
+            salonServicesList.innerHTML = '';
+            
+            userSalonServices.forEach(service => {
+                const serviceItem = document.createElement('div');
+                serviceItem.className = 'service-item';
+                serviceItem.innerHTML = `
+                    <div class="service-details">
+                        <div class="fw-bold">${service.service_name}</div>
+                        <div>₹${service.price.toFixed(2)} • ${service.estimated_time_minutes} mins</div>
+                    </div>
+                    <i class="fas fa-times remove-service" data-id="${service.id}"></i>
+                `;
+                salonServicesList.appendChild(serviceItem);
+                
+                // Add event listener to remove button
+                const removeBtn = serviceItem.querySelector('.remove-service');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', async (e) => {
+                        const id = e.target.getAttribute('data-id');
+                        await removeService(id);
+                    });
+                }
+            });
+        }
+
+        // Add a new service
+        addServiceBtn.addEventListener('click', async () => {
+            if (!userSalon) {
+                showToast('You need to have a salon registered to add services', true);
+                return;
+            }
+            
+            const name = document.getElementById('serviceNameInput').value.trim();
+            const price = parseFloat(document.getElementById('servicePriceInput').value);
+            const time = parseInt(document.getElementById('serviceTimeInput').value);
+            
+            if (!name) {
+                showToast('Please enter a service name', true);
+                return;
+            }
+            
+            if (!price || price <= 0) {
+                showToast('Please enter a valid price', true);
+                return;
+            }
+            
+            if (!time || time < 5 || time > 480) {
+                showToast('Please enter a time between 5 and 480 minutes', true);
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('salon_services')
+                    .insert({
+                        salon_id: userSalon.id,
+                        service_name: name,
+                        price: price,
+                        estimated_time_minutes: time
+                    })
+                    .select();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Refresh services list
+                await loadSalonServices(userSalon.id);
+                
+                // Reset form
+                document.getElementById('serviceNameInput').value = '';
+                document.getElementById('servicePriceInput').value = '';
+                document.getElementById('serviceTimeInput').value = '';
+                
+                showToast('Service added successfully');
+                
+            } catch (error) {
+                console.error('Error adding service:', error);
+                showToast('Error adding service: ' + error.message, true);
+            }
+        });
+
+        // Remove a service
+        async function removeService(serviceId) {
+            try {
+                const { error } = await supabase
+                    .from('salon_services')
+                    .delete()
+                    .eq('id', serviceId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Refresh services list
+                await loadSalonServices(userSalon.id);
+                showToast('Service removed successfully');
+                
+            } catch (error) {
+                console.error('Error removing service:', error);
+                showToast('Error removing service: ' + error.message, true);
+            }
+        }
+
+        // Load user bookings
+        async function loadUserBookings() {
+            try {
+                if (!currentUser) return;
+                
+                // Get user's bookings
+                const { data: bookings, error: bookingsError } = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        salons(name),
+                        salon_services(service_name)
+                    `)
+                    .eq('user_id', currentUser.id)
+                    .order('booking_date', { ascending: false });
+                
+                if (bookingsError) {
+                    throw bookingsError;
+                }
+                
+                userBookings = bookings || [];
+                renderUserBookings();
+                
+            } catch (error) {
+                console.error('Error loading user bookings:', error);
+                bookingsList.innerHTML = '<div class="alert alert-danger">Error loading bookings</div>';
+            }
+        }
+
+        // Render user bookings
+        function renderUserBookings() {
+            if (!bookingsList) return;
+            
+            if (userBookings.length === 0) {
+                bookingsList.innerHTML = '<div class="alert alert-info">You have no bookings yet.</div>';
+                return;
+            }
+            
+            bookingsList.innerHTML = '';
+            
+            userBookings.forEach(booking => {
+                const bookingDate = new Date(booking.booking_date);
+                const formattedDate = bookingDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                const bookingTime = booking.booking_time.substring(0, 5);
+                
+                const bookingItem = document.createElement('div');
+                bookingItem.className = 'booking-item';
+                bookingItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6>${booking.salons.name || 'Salon'}</h6>
+                            <p class="mb-1">${booking.salon_services.service_name || 'Service'}</p>
+                            <small class="text-muted">${formattedDate} at ${bookingTime}</small>
+                        </div>
+                        <span class="booking-status status-${booking.status}">${booking.status}</span>
+                    </div>
+                `;
+                bookingsList.appendChild(bookingItem);
+            });
+        }
+
+        // Load salon bookings (for merchants)
+        async function loadSalonBookings() {
+            try {
+                if (!userSalon) return;
+                
+                // Get bookings for the salon
+                const { data: bookings, error: bookingsError } = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        users(full_name, phone),
+                        salon_services(service_name)
+                    `)
+                    .eq('salon_id', userSalon.id)
+                    .order('booking_date', { ascending: false });
+                
+                if (bookingsError) {
+                    throw bookingsError;
+                }
+                
+                salonBookings = bookings || [];
+                renderSalonBookings();
+                
+            } catch (error) {
+                console.error('Error loading salon bookings:', error);
+                salonBookingsList.innerHTML = '<div class="alert alert-danger">Error loading salon bookings</div>';
+            }
+        }
+
+        // Render salon bookings
+        function renderSalonBookings() {
+            if (!salonBookingsList) return;
+            
+            if (salonBookings.length === 0) {
+                salonBookingsList.innerHTML = '<div class="alert alert-info">No bookings for your salon yet.</div>';
+                return;
+            }
+            
+            salonBookingsList.innerHTML = '';
+            
+            salonBookings.forEach(booking => {
+                const bookingDate = new Date(booking.booking_date);
+                const formattedDate = bookingDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                const bookingTime = booking.booking_time.substring(0, 5);
+                
+                const bookingItem = document.createElement('div');
+                bookingItem.className = 'booking-item';
+                bookingItem.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6>${booking.users.full_name || 'Customer'}</h6>
+                            <p class="mb-1">${booking.salon_services.service_name || 'Service'}</p>
+                            <small class="text-muted">${formattedDate} at ${bookingTime}</small>
+                            <br>
+                            <small class="text-muted">Phone: ${booking.users.phone || 'Not provided'}</small>
+                        </div>
+                        <span class="booking-status status-${booking.status}">${booking.status}</span>
+                    </div>
+                `;
+                salonBookingsList.appendChild(bookingItem);
+            });
+        }
+
+        // Logout function
+        logoutBtn.addEventListener('click', async function() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Redirect to login page after logout
+                window.location.href = 'login.html';
+            } catch (error) {
+                console.error('Error logging out:', error);
+                showToast('Error logging out. Please try again.', true);
+            }
+        });
+
+        // Change password function
+        changePasswordBtn.addEventListener('click', function() {
+            showToast('Password change functionality would be implemented here.');
+            // In a real implementation, you would show a modal or redirect to a password change page
+        });
+
+        // Register salon function
+        registerSalonBtn.addEventListener('click', function() {
+            window.location.href = 'merchantregister.html';
+        });
+
+        // Initialize the page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserProfile();
+            
+            // Listen for auth state changes
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_OUT') {
+                    window.location.href = 'login.html';
+                } else if (event === 'SIGNED_IN') {
+                    // Reload profile if user signs in
+                    loadUserProfile();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
-    
-    
