@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProCut | Salon Directory</title>
+    <title>ProCut | Find Salons</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -14,57 +13,139 @@
             --secondary: #8a6d3b;
             --light: #f9f9f9;
             --accent: #ff6b6b;
+            --success: #28a745;
         }
         
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: #fff;
-            color: #000;
+            color: var(--primary);
             padding-bottom: 70px;
         }
         
+        .search-header {
+            background-color: var(--light);
+            padding: 20px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .salon-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .salon-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .salon-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        
+        .salon-info {
+            padding: 15px;
+        }
+        
+        .salon-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--secondary);
+        }
+        
+        .salon-location {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .salon-hours {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .status-open {
+            background-color: #e8f5e8;
+            color: var(--success);
+        }
+        
+        .status-closed {
+            background-color: #ffe8e8;
+            color: var(--accent);
+        }
+        
+        .salon-contact {
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary);
+            border: none;
+            padding: 8px 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-radius: 8px;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            background-color: #7a5f32;
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--secondary);
+            color: var(--secondary);
+            padding: 8px 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-radius: 8px;
+            width: 100%;
+        }
+        
+        .btn-outline:hover {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
         .logo {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
+            color: var(--primary);
         }
         
         .logo span {
             color: var(--secondary);
         }
         
-        .location-indicator {
-            background: rgba(138, 109, 59, 0.1);
-            border-radius: 20px;
-            padding: 5px 15px;
-            display: flex;
-            align-items: center;
-            transition: all 0.3s;
-        }
-        
-        .location-indicator:hover {
-            background: rgba(138, 109, 59, 0.2);
-            cursor: pointer;
-        }
-        
-        .search-container {
+        .search-box {
             position: relative;
-            display: flex;
-            margin: 15px 0;
+            margin-bottom: 20px;
         }
         
-        .search-container input {
-            padding: 12px 20px 12px 45px;
-            border-radius: 30px;
-            border: 1px solid #e0e0e0;
-            flex-grow: 1;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        .search-container input:focus {
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(138, 109, 59, 0.2);
-            outline: none;
+        .search-input {
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            padding-left: 45px;
         }
         
         .search-icon {
@@ -73,824 +154,556 @@
             top: 50%;
             transform: translateY(-50%);
             color: #777;
-            font-size: 18px;
         }
         
-        .search-button {
-            background-color: var(--secondary);
-            color: white;
-            border: none;
-            border-radius: 30px;
-            padding: 0 25px;
-            margin-left: 10px;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(138, 109, 59, 0.3);
-        }
-        
-        .search-button:hover {
-            background-color: #7a5f32;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(138, 109, 59, 0.4);
-        }
-        
-        .search-button:active {
-            transform: translateY(0);
-        }
-        
-        .category {
-            white-space: nowrap;
-            padding: 10px 20px;
-            border-radius: 30px;
-            border: 1px solid #e0e0e0;
-            background: #f9f9f9;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .category.active, .category:hover {
-            background-color: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-        }
-        
-        .salon-card {
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            height: 100%;
-            margin-bottom: 20px;
-            cursor: pointer;
-        }
-        
-        .salon-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-        
-        .salon-img {
-            height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .no-results {
+            text-align: center;
+            padding: 40px 20px;
             color: #777;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
         }
         
-        .salon-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s;
+        .no-results i {
+            font-size: 60px;
+            margin-bottom: 15px;
+            color: #ddd;
         }
         
-        .salon-card:hover .salon-img img {
-            transform: scale(1.05);
+        .loading-spinner {
+            text-align: center;
+            padding: 30px;
         }
         
-        .salon-img .status-tag {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: var(--accent);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .btn-primary {
-            background-color: var(--primary);
-            border: none;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .btn-primary:hover {
-            background-color: #333;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        .section-title {
-            position: relative;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            font-weight: 700;
-        }
-        
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: var(--secondary);
-        }
-        
+        /* Bottom Navigation */
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
-            right: 0;
-            background-color: #fff;
-            box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.1);
-            z-index: 100;
+            width: 100%;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
         }
         
         .nav-item {
-            padding: 12px 0;
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
             color: #777;
+            font-size: 0.8rem;
             transition: all 0.3s;
+            padding: 5px 10px;
+            border-radius: 8px;
         }
         
-        .nav-item.active, .nav-item:hover {
-            color: var(--primary);
+        .nav-item.active {
+            color: var(--secondary);
         }
         
         .nav-item i {
-            display: block;
-            font-size: 20px;
-            margin-bottom: 5px;
+            font-size: 1.2rem;
+            margin-bottom: 3px;
         }
         
-        .nav-text {
-            font-size: 12px;
+        /* Modal Styles */
+        .modal-content {
+            border-radius: 12px;
+            border: none;
         }
         
-        .service-tag {
-            display: inline-block;
-            background: rgba(138, 109, 59, 0.1);
-            color: var(--secondary);
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            margin-right: 5px;
-            margin-bottom: 5px;
+        .modal-header {
+            background-color: var(--light);
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px 20px;
         }
         
-        .loading-spinner {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 200px;
-        }
-        
-        .spinner-border {
-            width: 3rem;
-            height: 3rem;
+        .modal-title {
+            font-weight: 600;
             color: var(--secondary);
         }
         
-        .error-message {
-            text-align: center;
-            padding: 40px;
-            color: var(--accent);
-        }
-        
-        /* Salon Detail Modal Styles */
         .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
             border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
+            border-radius: 8px;
             margin-bottom: 10px;
-            transition: all 0.3s;
-        }
-        
-        .service-item:hover {
-            border-color: var(--secondary);
-            background-color: rgba(138, 109, 59, 0.05);
-        }
-        
-        .service-item.selected {
-            border-color: var(--secondary);
-            background-color: rgba(138, 109, 59, 0.1);
-        }
-        
-        .booking-summary {
             background-color: #f9f9f9;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
         }
         
-        @media (max-width: 768px) {
-            .logo {
-                font-size: 24px;
-            }
-            
-            .search-button {
-                padding: 0 20px;
-            }
-            
-            .search-container input {
-                padding-left: 40px;
-            }
+        .service-name {
+            font-weight: 500;
+        }
+        
+        .service-price {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .service-time {
+            font-size: 0.8rem;
+            color: #777;
+        }
+        
+        .salon-details {
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .detail-icon {
+            width: 30px;
+            color: var(--secondary);
+        }
+        
+        .map-preview {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            margin-top: 10px;
+            border: 1px dashed #ddd;
+        }
+        
+        .map-preview i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .toast {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-left: 4px solid var(--success);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .toast.error {
+            border-left-color: var(--accent);
         }
     </style>
 </head>
 <body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <!-- Header Section -->
     <header class="sticky-top bg-white shadow-sm">
         <div class="container py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="logo">Pro<span>Cut</span></div>
-                <div class="location-indicator" data-bs-toggle="modal" data-bs-target="#locationModal">
-                    <i class="fas fa-map-marker-alt me-2"></i>
-                    <span class="location-text">Neelbad Rd, Bhopal</span>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-bell me-3" style="font-size: 20px; cursor: pointer;"></i>
                 </div>
-            </div>
-            
-            <!-- Search Section -->
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" placeholder="Search for salons by name, city, address, or owner...">
-                <button class="search-button" onclick="filterSalons()">
-                    <i class="fas fa-search me-2"></i> Search
-                </button>
             </div>
         </div>
         
-        <!-- Categories Navigation -->
-        <div class="container overflow-auto d-flex gap-3 py-2">
-            <div class="category active" data-category="all">All Salons</div>
-            <div class="category" data-category="open">Open Now</div>
-            <div class="category" data-category="rated">High Rated</div>
-            <div class="category" data-category="hair">Hair Services</div>
-            <div class="category" data-category="spa">Spa Services</div>
+        <!-- Search Header -->
+        <div class="search-header">
+            <div class="container">
+                <h2 class="mb-3">Find Your Perfect Salon</h2>
+                <p class="text-muted">Search and book appointments at top-rated salons near you</p>
+                
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search by name, address, or city...">
+                </div>
+            </div>
         </div>
     </header>
 
     <!-- Main Content -->
     <div class="container py-4">
-        <h3 class="section-title">Available Salons</h3>
-        
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="loading-spinner">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-        
-        <!-- Error Message -->
-        <div id="errorMessage" class="error-message" style="display: none;">
-            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-            <h4>Unable to Load Salon Data</h4>
-            <p>Please check your internet connection and try again</p>
-            <button class="btn btn-primary mt-3" onclick="fetchSalons()">Try Again</button>
-        </div>
-        
-        <!-- Salon Cards Container -->
-        <div id="salonContainer" class="row g-4" style="display: none;">
-            <!-- Salon cards will be dynamically inserted here -->
-        </div>
-    </div>
-
-    <!-- Salon Detail Modal -->
-    <div class="modal fade" id="salonDetailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="salonName">Salon Name</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="salonDetailContent">
-                        <!-- Salon details will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Booking Modal -->
-    <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Book Appointment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="bookingContent">
-                        <!-- Booking form will be loaded here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Location Modal -->
-    <div class="modal fade location-modal" id="locationModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Select Your Location</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div class="location-option" data-location="Neelbad Rd, Bhopal">
-                        <i class="fas fa-map-marker-alt"></i> Neelbad Rd, Bhopal (Current)
-                    </div>
-                    <div class="location-option" data-location="MP Nagar, Bhopal">
-                        <i class="fas fa-map-marker-alt"></i> MP Nagar, Bhopal
-                    </div>
-                    <div class="location-option" data-location="New Market, Bhopal">
-                        <i class="fas fa-map-marker-alt"></i> New Market, Bhopal
-                    </div>
-                    <div class="location-option" data-location="Arera Colony, Bhopal">
-                        <i class="fas fa-map-marker-alt"></i> Arera Colony, Bhopal
-                    </div>
-                    <div class="location-option" data-location="Kolar Road, Bhopal">
-                        <i class="fas fa-map-marker-alt"></i> Kolar Road, Bhopal
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
-            </div>
+        <div id="results">
+            <!-- Results will be loaded here -->
         </div>
     </div>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav d-md-none">
-        <div class="container d-flex justify-content-around">
-            <a href="index.html" class="nav-item">
-                <i class="fas fa-home"></i>
-                <span class="nav-text">Home</span>
-            </a>
-            <a href="#" class="nav-item active">
-                <i class="fas fa-store"></i>
-                <span class="nav-text">Salons</span>
-            </a>
-            <a href="userbookings.html" class="nav-item">
-                <i class="fas fa-calendar"></i>
-                <span class="nav-text">Bookings</span>
-            </a>
-            <a href="profile.html" class="nav-item">
-                <i class="fas fa-user"></i>
-                <span class="nav-text">Profile</span>
-            </a>
-        </div>
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
     </nav>
 
+    <!-- Salon Details Modal -->
+    <div class="modal fade" id="salonModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="salonModalLabel">Salon Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="salonDetails"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="bookNowBtn">Book Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Supabase configuration
-        const supabaseUrl = 'YOUR_SUPABASE_URL';
-        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        // Supabase config
+        const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let allSalons = [];
-        let currentUser = null;
+        // Global variable to store current salon ID for booking
+        let currentSalonId = null;
 
-        // Function to fetch salon data from Supabase
-        async function fetchSalons() {
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            const errorMessage = document.getElementById('errorMessage');
-            const salonContainer = document.getElementById('salonContainer');
-            
-            // Show loading spinner, hide other elements
-            loadingSpinner.style.display = 'flex';
-            errorMessage.style.display = 'none';
-            salonContainer.style.display = 'none';
-            
-            try {
-                const { data: salons, error } = await supabase
-                    .from('salons')
-                    .select(`
-                        *,
-                        salon_services (*)
-                    `)
-                    .eq('status', 'approved');
-                
-                if (error) throw error;
-                
-                allSalons = salons || [];
-                
-                // Hide loading spinner
-                loadingSpinner.style.display = 'none';
-                
-                // Display salons
-                displaySalons(allSalons);
-                
-            } catch (error) {
-                console.error('Error fetching salon data:', error);
-                
-                // Hide loading spinner, show error message
-                loadingSpinner.style.display = 'none';
-                errorMessage.style.display = 'block';
-            }
-        }
-        
-        // Function to display salons in the UI
-        function displaySalons(salons) {
-            const salonContainer = document.getElementById('salonContainer');
-            salonContainer.innerHTML = '';
-            
-            if (salons.length === 0) {
-                salonContainer.innerHTML = `
-                    <div class="col-12 text-center py-5">
-                        <i class="fas fa-store-slash fa-3x text-muted mb-3"></i>
-                        <h4 class="text-muted">No Salons Found</h4>
-                        <p class="text-muted">No salons match your search criteria.</p>
-                    </div>
-                `;
-            } else {
-                salons.forEach(salon => {
-                    const salonCard = createSalonCard(salon);
-                    salonContainer.innerHTML += salonCard;
-                });
-            }
-            
-            // Show the salon container
-            salonContainer.style.display = 'flex';
-        }
-        
-        // Function to create HTML for a salon card
-        function createSalonCard(salon) {
-            // Generate a placeholder image URL based on salon name
-            const placeholderImage = `https://via.placeholder.com/300x180/8a6d3b/ffffff?text=${encodeURIComponent(salon.name)}`;
-            
-            // Get unique service categories
-            const serviceCategories = [...new Set(salon.salon_services.map(service => 
-                service.service_name.split(' ')[0]
-            ))].slice(0, 3);
-            
-            const serviceTags = serviceCategories.map(category => 
-                `<span class="service-tag">${category}</span>`
-            ).join('');
-            
-            // Determine if salon is open (simplified logic)
-            const now = new Date();
-            const currentTime = now.getHours() * 100 + now.getMinutes();
-            const openingTime = parseInt(salon.opening_time.replace(':', ''));
-            const closingTime = parseInt(salon.closing_time.replace(':', ''));
-            const isOpen = currentTime >= openingTime && currentTime <= closingTime;
-            
-            const statusText = isOpen ? 'Open Now' : 'Closed';
-            const statusClass = isOpen ? 'bg-success' : 'bg-secondary';
-            
-            return `
-                <div class="col-md-6 col-lg-4">
-                    <div class="salon-card" onclick="showSalonDetail('${salon.id}')">
-                        <div class="salon-img">
-                            <img src="${salon.image_url || placeholderImage}" alt="${salon.name}">
-                            <div class="status-tag ${statusClass}">${statusText}</div>
-                        </div>
-                        <div class="p-4">
-                            <h5>${salon.name}</h5>
-                            <p class="text-muted small mb-2">
-                                <i class="fas fa-map-marker-alt me-1"></i> ${salon.address}, ${salon.city}
-                            </p>
-                            <p class="text-muted small mb-2">
-                                <i class="fas fa-phone me-1"></i> ${salon.contact_phone}
-                            </p>
-                            <div class="mb-3">
-                                ${serviceTags}
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-warning">
-                                    <i class="fas fa-star"></i> 4.5
-                                </div>
-                                <button class="btn btn-primary" onclick="event.stopPropagation(); showBookingForm('${salon.id}')">Book Now</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Function to show salon details
-        async function showSalonDetail(salonId) {
-            const salon = allSalons.find(s => s.id === salonId);
-            if (!salon) return;
-            
-            const modal = new bootstrap.Modal(document.getElementById('salonDetailModal'));
-            document.getElementById('salonName').textContent = salon.name;
-            
-            const servicesHtml = salon.salon_services.map(service => `
-                <div class="service-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-1">${service.service_name}</h6>
-                            <small class="text-muted">${service.estimated_time_minutes} mins</small>
-                        </div>
-                        <div>
-                            <span class="fw-bold">₹${service.price}</span>
-                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="addToBooking('${service.id}')">Add</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-            
-            document.getElementById('salonDetailContent').innerHTML = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <img src="${salon.image_url || 'https://via.placeholder.com/400x300'}" class="img-fluid rounded mb-3" alt="${salon.name}">
-                        <h6>About</h6>
-                        <p>${salon.description || 'Premium salon services with experienced professionals.'}</p>
-                        <h6>Contact Info</h6>
-                        <p><i class="fas fa-phone"></i> ${salon.contact_phone}</p>
-                        <p><i class="fas fa-envelope"></i> ${salon.contact_email}</p>
-                        <p><i class="fas fa-clock"></i> ${salon.opening_time} - ${salon.closing_time}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Services</h6>
-                        ${servicesHtml}
-                    </div>
-                </div>
-            `;
-            
-            modal.show();
-        }
-        
-        // Function to show booking form
-        async function showBookingForm(salonId) {
-            const salon = allSalons.find(s => s.id === salonId);
-            if (!salon) return;
-            
-            const modal = new bootstrap.Modal(document.getElementById('bookingModal'));
-            
-            // Check if user is logged in
-            const { data: { user } } = await supabase.auth.getUser();
-            currentUser = user;
-            
-            if (!user) {
-                document.getElementById('bookingContent').innerHTML = `
-                    <div class="text-center py-4">
-                        <i class="fas fa-user-lock fa-3x text-muted mb-3"></i>
-                        <h4>Login Required</h4>
-                        <p>Please login to book an appointment</p>
-                        <button class="btn btn-primary" onclick="login()">Login</button>
-                    </div>
-                `;
-                modal.show();
-                return;
-            }
-            
-            const servicesHtml = salon.salon_services.map(service => `
-                <div class="service-item" id="service-${service.id}">
-                    <div class="form-check">
-                        <input class="form-check-input service-checkbox" type="checkbox" value="${service.id}" 
-                               data-price="${service.price}" data-name="${service.service_name}">
-                        <label class="form-check-label w-100">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <h6 class="mb-1">${service.service_name}</h6>
-                                    <small class="text-muted">${service.estimated_time_minutes} mins</small>
-                                </div>
-                                <span class="fw-bold">₹${service.price}</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            `).join('');
-            
-            document.getElementById('bookingContent').innerHTML = `
-                <form id="bookingForm">
-                    <input type="hidden" id="salonId" value="${salonId}">
-                    
-                    <h6>Select Services</h6>
-                    <div class="mb-3">
-                        ${servicesHtml}
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="bookingDate" class="form-label">Date</label>
-                            <input type="date" class="form-control" id="bookingDate" required min="${new Date().toISOString().split('T')[0]}">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="bookingTime" class="form-label">Time</label>
-                            <input type="time" class="form-control" id="bookingTime" required>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="specialInstructions" class="form-label">Special Instructions</label>
-                        <textarea class="form-control" id="specialInstructions" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="booking-summary">
-                        <h6>Booking Summary</h6>
-                        <div id="selectedServices"></div>
-                        <div class="d-flex justify-content-between mt-2">
-                            <strong>Total Amount:</strong>
-                            <strong id="totalAmount">₹0</strong>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <strong>Token Amount (20%):</strong>
-                            <strong id="tokenAmount">₹0</strong>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary w-100">Proceed to Payment</button>
-                    </div>
-                </form>
-            `;
-            
-            // Add event listeners to checkboxes
-            document.querySelectorAll('.service-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', updateBookingSummary);
-            });
-            
-            modal.show();
-        }
-        
-        // Function to update booking summary
-        function updateBookingSummary() {
-            const selectedServices = document.querySelectorAll('.service-checkbox:checked');
-            let totalAmount = 0;
-            let servicesHtml = '';
-            
-            selectedServices.forEach(checkbox => {
-                const price = parseFloat(checkbox.dataset.price);
-                totalAmount += price;
-                servicesHtml += `<div>${checkbox.dataset.name} - ₹${price}</div>`;
-            });
-            
-            const tokenAmount = totalAmount * 0.2;
-            
-            document.getElementById('selectedServices').innerHTML = servicesHtml || '<div class="text-muted">No services selected</div>';
-            document.getElementById('totalAmount').textContent = `₹${totalAmount}`;
-            document.getElementById('tokenAmount').textContent = `₹${tokenAmount}`;
-        }
-        
-        // Function to handle booking form submission
-        async function handleBooking(event) {
-            event.preventDefault();
-            
-            const selectedServices = document.querySelectorAll('.service-checkbox:checked');
-            if (selectedServices.length === 0) {
-                alert('Please select at least one service');
-                return;
-            }
-            
-            const bookingData = {
-                salon_id: document.getElementById('salonId').value,
-                customer_id: currentUser.id,
-                booking_date: document.getElementById('bookingDate').value,
-                booking_time: document.getElementById('bookingTime').value,
-                total_amount: parseFloat(document.getElementById('totalAmount').textContent.replace('₹', '')),
-                token_amount: parseFloat(document.getElementById('tokenAmount').textContent.replace('₹', '')),
-                customer_name: currentUser.user_metadata?.name || 'Customer',
-                customer_phone: currentUser.user_metadata?.phone || '',
-                customer_email: currentUser.email,
-                special_instructions: document.getElementById('specialInstructions').value,
-                status: 'pending'
-            };
-            
-            try {
-                // Insert booking
-                const { data: booking, error } = await supabase
-                    .from('bookings')
-                    .insert([bookingData])
-                    .select()
-                    .single();
-                
-                if (error) throw error;
-                
-                // Insert booking services
-                const bookingServices = Array.from(selectedServices).map(checkbox => ({
-                    booking_id: booking.id,
-                    service_id: checkbox.value,
-                    price: parseFloat(checkbox.dataset.price),
-                    quantity: 1
-                }));
-                
-                const { error: servicesError } = await supabase
-                    .from('booking_services')
-                    .insert(bookingServices);
-                
-                if (servicesError) throw servicesError;
-                
-                alert('Booking created successfully! Please complete the token payment.');
-                bootstrap.Modal.getInstance(document.getElementById('bookingModal')).hide();
-                
-            } catch (error) {
-                console.error('Error creating booking:', error);
-                alert('Error creating booking. Please try again.');
-            }
-        }
-        
-        // Function to filter salons based on search input and categories
-        function filterSalons() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const activeCategory = document.querySelector('.category.active').dataset.category;
-            
-            let filteredSalons = allSalons.filter(salon => {
-                const matchesSearch = 
-                    salon.name.toLowerCase().includes(searchTerm) ||
-                    salon.city.toLowerCase().includes(searchTerm) ||
-                    salon.address.toLowerCase().includes(searchTerm) ||
-                    salon.contact_name.toLowerCase().includes(searchTerm);
-                
-                let matchesCategory = true;
-                
-                switch (activeCategory) {
-                    case 'open':
-                        const now = new Date();
-                        const currentTime = now.getHours() * 100 + now.getMinutes();
-                        const openingTime = parseInt(salon.opening_time.replace(':', ''));
-                        const closingTime = parseInt(salon.closing_time.replace(':', ''));
-                        matchesCategory = currentTime >= openingTime && currentTime <= closingTime;
-                        break;
-                    case 'rated':
-                        matchesCategory = true; // You can implement rating logic later
-                        break;
-                    case 'hair':
-                        matchesCategory = salon.salon_services.some(service => 
-                            service.service_name.toLowerCase().includes('hair'));
-                        break;
-                    case 'spa':
-                        matchesCategory = salon.salon_services.some(service => 
-                            service.service_name.toLowerCase().includes('spa'));
-                        break;
-                }
-                
-                return matchesSearch && matchesCategory;
-            });
-            
-            displaySalons(filteredSalons);
-        }
-        
-        // Function to handle user login
-        async function login() {
-            // Implement your login logic here
-            // This is a simplified version - you should use Supabase auth
-            const email = prompt('Enter your email:');
-            const password = prompt('Enter your password:');
-            
-            if (email && password) {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password
-                });
-                
-                if (error) {
-                    alert('Login failed: ' + error.message);
-                } else {
-                    currentUser = data.user;
-                    alert('Login successful!');
-                    bootstrap.Modal.getInstance(document.getElementById('bookingModal')).hide();
-                }
-            }
-        }
-        
-        // Initialize the page when it loads
+        // Load all salons on page load
         document.addEventListener('DOMContentLoaded', function() {
-            // Fetch salon data when page loads
-            fetchSalons();
+            loadAllSalons();
             
             // Add event listener for search input
-            document.getElementById('searchInput').addEventListener('input', filterSalons);
-            
-            // Add event listeners for category filters
-            document.querySelectorAll('.category').forEach(category => {
-                category.addEventListener('click', function() {
-                    // Remove active class from all categories
-                    document.querySelectorAll('.category').forEach(cat => {
-                        cat.classList.remove('active');
-                    });
-                    
-                    // Add active class to clicked category
-                    this.classList.add('active');
-                    
-                    // Filter salons based on category
-                    filterSalons();
-                });
-            });
-            
-            // Add event listeners for location options
-            document.querySelectorAll('.location-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    const location = this.getAttribute('data-location');
-                    document.querySelector('.location-text').textContent = location;
-                    
-                    // Filter salons by location
-                    filterSalons();
-                });
-            });
-            
-            // Add event listener for booking form submission
-            document.addEventListener('submit', function(event) {
-                if (event.target.id === 'bookingForm') {
-                    handleBooking(event);
+            document.getElementById('searchInput').addEventListener('input', function() {
+                if (this.value.trim() === '') {
+                    loadAllSalons();
+                } else {
+                    searchSalons();
                 }
             });
         });
+
+        async function searchSalons() {
+            const query = document.getElementById("searchInput").value.trim();
+            const resultsDiv = document.getElementById("results");
+            
+            // Show loading spinner
+            resultsDiv.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Searching for salons...</p>
+                </div>
+            `;
+
+            let { data, error } = await supabase
+                .from("salons")
+                .select("*")
+                .or(`name.ilike.%${query}%,address.ilike.%${query}%,city.ilike.%${query}%`);
+
+            if (error) {
+                showToast('Error searching salons: ' + error.message, 'error');
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-search"></i>
+                        <h4>No salons found</h4>
+                        <p>Try adjusting your search terms or browse all salons</p>
+                        <button class="btn btn-primary mt-2" onclick="loadAllSalons()">Browse All Salons</button>
+                    </div>
+                `;
+                return;
+            }
+
+            displaySalons(data);
+        }
+
+        async function loadAllSalons() {
+            const resultsDiv = document.getElementById("results");
+            
+            resultsDiv.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading salons...</p>
+                </div>
+            `;
+
+            let { data, error } = await supabase
+                .from("salons")
+                .select("*");
+
+            if (error) {
+                showToast('Error loading salons: ' + error.message, 'error');
+                return;
+            }
+
+            displaySalons(data);
+        }
+
+        function displaySalons(salons) {
+            const resultsDiv = document.getElementById("results");
+            
+            if (!salons || salons.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-store-slash"></i>
+                        <h4>No salons available</h4>
+                        <p>There are no salons registered in the system yet.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5>Found ${salons.length} Salon(s)</h5>
+                </div>
+                <div class="row" id="salonList">
+            `;
+
+            salons.forEach(salon => {
+                const isOpen = checkIfOpen(salon);
+                
+                const salonCard = document.createElement("div");
+                salonCard.className = "col-md-6";
+                salonCard.innerHTML = `
+                    <div class="salon-card">
+                        <img src="${salon.image_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
+                             class="salon-image" alt="${salon.name}">
+                        <div class="salon-info">
+                            <h5 class="salon-name">${salon.name}</h5>
+                            <p class="salon-location">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                ${salon.address}, ${salon.city}
+                            </p>
+                            <div class="salon-hours">
+                                <span class="status-badge ${isOpen ? 'status-open' : 'status-closed'}">
+                                    ${isOpen ? 'Open Now' : 'Closed'}
+                                </span>
+                                <span>${formatTime(salon.opening_time)} - ${formatTime(salon.closing_time)}</span>
+                            </div>
+                            <p class="salon-contact">
+                                <i class="fas fa-phone me-1"></i> ${salon.contact_phone}
+                            </p>
+                            <div class="row">
+                                <div class="col-6">
+                                    <button class="btn btn-outline" onclick="viewSalonDetails('${salon.id}')">
+                                        Details
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-primary" onclick="bookSalon('${salon.id}')">
+                                        Book Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById("salonList").appendChild(salonCard);
+            });
+            
+            resultsDiv.innerHTML += `</div>`;
+        }
+
+        async function viewSalonDetails(salonId) {
+            // Fetch salon details
+            let { data: salon, error } = await supabase
+                .from("salons")
+                .select("*")
+                .eq("id", salonId)
+                .single();
+
+            if (error) {
+                showToast('Error fetching salon details: ' + error.message, 'error');
+                return;
+            }
+
+            // Fetch salon services
+            let { data: services, error: servicesError } = await supabase
+                .from("salon_services")
+                .select("*")
+                .eq("salon_id", salonId);
+
+            if (servicesError) {
+                console.error("Error fetching services: ", servicesError);
+            }
+
+            const isOpen = checkIfOpen(salon);
+            
+            // Populate modal with salon details
+            document.getElementById('salonModalLabel').textContent = salon.name;
+            document.getElementById('salonDetails').innerHTML = `
+                <div class="salon-details">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <img src="${salon.image_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
+                                 class="img-fluid rounded mb-3" alt="${salon.name}">
+                            <div class="d-flex mb-3">
+                                <span class="status-badge ${isOpen ? 'status-open' : 'status-closed'} me-2">
+                                    ${isOpen ? 'Open Now' : 'Closed'}
+                                </span>
+                                <span class="badge bg-secondary">${salon.status}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Contact Information</h6>
+                            <div class="detail-item">
+                                <div class="detail-icon"><i class="fas fa-user"></i></div>
+                                <div>${salon.contact_name}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon"><i class="fas fa-phone"></i></div>
+                                <div>${salon.contact_phone}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon"><i class="fas fa-envelope"></i></div>
+                                <div>${salon.contact_email}</div>
+                            </div>
+                            
+                            <h6 class="mt-4">Business Hours</h6>
+                            <div class="detail-item">
+                                <div class="detail-icon"><i class="fas fa-clock"></i></div>
+                                <div>${formatTime(salon.opening_time)} - ${formatTime(salon.closing_time)}</div>
+                            </div>
+                            ${salon.closed_on_sunday ? 
+                                '<div class="detail-item"><div class="detail-icon"><i class="fas fa-calendar-times"></i></div><div>Closed on Sundays</div></div>' : 
+                                ''}
+                        </div>
+                    </div>
+                    
+                    ${salon.description ? `
+                        <div class="mt-3">
+                            <h6>Description</h6>
+                            <p>${salon.description}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="mt-3">
+                        <h6>Location</h6>
+                        <p><i class="fas fa-map-marker-alt me-2"></i> ${salon.address}, ${salon.city}</p>
+                        ${salon.map_link ? `
+                            <div class="map-preview">
+                                <div class="text-center">
+                                    <i class="fas fa-map-marked-alt"></i>
+                                    <p class="mt-2">Map Location Available</p>
+                                    <a href="${salon.map_link}" target="_blank" class="btn btn-outline btn-sm mt-2">View on Map</a>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="map-preview">
+                                <div class="text-center">
+                                    <i class="fas fa-map-marked-alt"></i>
+                                    <p class="mt-2">No map location provided</p>
+                                </div>
+                            </div>
+                        `}
+                    </div>
+                    
+                    ${services && services.length > 0 ? `
+                        <div class="mt-4">
+                            <h6>Services Offered</h6>
+                            ${services.map(service => `
+                                <div class="service-item">
+                                    <div>
+                                        <div class="service-name">${service.service_name}</div>
+                                        <div class="service-time">${service.estimated_time_minutes} minutes</div>
+                                    </div>
+                                    <div class="service-price">₹${service.price}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="text-muted mt-3">No services listed for this salon.</p>'}
+                </div>
+            `;
+            
+            // Set current salon ID for booking
+            currentSalonId = salonId;
+            
+            // Show the modal
+            const salonModal = new bootstrap.Modal(document.getElementById('salonModal'));
+            salonModal.show();
+        }
+
+        function bookSalon(salonId) {
+            // Redirect to booking page with salon ID
+            window.location.href = `booking.html?salon=${salonId}`;
+        }
+
+        function checkIfOpen(salon) {
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const openingTime = timeToMinutes(salon.opening_time);
+            const closingTime = timeToMinutes(salon.closing_time);
+            
+            // Check if today is Sunday and salon is closed on Sundays
+            if (salon.closed_on_sunday && now.getDay() === 0) {
+                return false;
+            }
+            
+            return currentTime >= openingTime && currentTime <= closingTime;
+        }
+
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function formatTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const formattedHours = hours % 12 || 12;
+            return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        }
+
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="toast-body d-flex justify-content-between">
+                    <div>
+                        <i class="fas ${type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 5000 });
+            bsToast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
+
+        // Set up book now button in modal
+        document.getElementById('bookNowBtn').addEventListener('click', function() {
+            if (currentSalonId) {
+                bookSalon(currentSalonId);
+            }
+        });
     </script>
 </body>
-</html>
+</html>         
