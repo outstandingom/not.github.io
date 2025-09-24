@@ -211,41 +211,6 @@
             margin-left: 10px;
         }
         
-        .booking-item {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            background-color: #f9f9f9;
-        }
-        
-        .booking-status {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .status-pending {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-confirmed {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-        
-        .status-completed {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .status-cancelled {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
         .toast-container {
             position: fixed;
             top: 20px;
@@ -270,6 +235,52 @@
             background-color: #f5f5f5;
             margin-top: 10px;
             border: 1px dashed #ddd;
+        }
+        
+        /* Barber specific styles */
+        .barber-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f9f9f9;
+        }
+        
+        .barber-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        
+        .barber-info {
+            flex: 1;
+        }
+        
+        .barber-rating {
+            color: #ffc107;
+        }
+        
+        .barber-experience {
+            background-color: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .add-barber-form {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -299,7 +310,6 @@
     <div class="container py-4">
         <div class="profile-nav">
             <div class="profile-nav-item active" data-tab="profileTab">Profile</div>
-            <div class="profile-nav-item" data-tab="bookingsTab">Bookings</div>
             <div class="profile-nav-item" data-tab="salonTab" id="salonTabNav" style="display: none;">My Salon</div>
             <div class="profile-nav-item" data-tab="settingsTab">Settings</div>
         </div>
@@ -335,17 +345,7 @@
                 </div>
             </div>
         </div>
-
-         <!-- Bookings Tab -->
-        <div id="bookingsTab" style="display: none;">
-            <div class="profile-card">
-                <h5 class="profile-card-title">My Bookings</h5>
-                <div id="bookingsList">
-                    <div class="alert alert-info">Loading bookings...</div>
-                </div>
-            </div>
-        </div>
-
+        
         <!-- Salon Tab (for merchants only) -->
         <div id="salonTab" style="display: none;">
             <div class="profile-card">
@@ -374,6 +374,11 @@
                 </div>
                 
                 <div class="profile-detail">
+                    <div class="profile-detail-label">Rating</div>
+                    <div class="profile-detail-value" id="salonRating">Loading...</div>
+                </div>
+                
+                <div class="profile-detail">
                     <div class="profile-detail-label">Business Hours</div>
                     <div class="profile-detail-value" id="salonHours">Loading...</div>
                 </div>
@@ -388,6 +393,31 @@
                         <i class="fas fa-map-marked-alt"></i>
                         <p class="mt-2">Map preview will appear here</p>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Barbers Section -->
+            <div class="profile-card">
+                <h5 class="profile-card-title">Our Barbers</h5>
+                
+                <div class="add-barber-form">
+                    <h6>Add New Barber</h6>
+                    <div class="form-grid">
+                        <input type="text" class="form-control" id="barberNameInput" placeholder="Barber Name">
+                        <input type="number" class="form-control" id="barberExperienceInput" placeholder="Experience (years)" min="0">
+                    </div>
+                    <div class="form-grid">
+                        <input type="text" class="form-control" id="barberSpecializationInput" placeholder="Specialization">
+                        <input type="number" class="form-control" id="barberRatingInput" placeholder="Rating (0-5)" min="0" max="5" step="0.1">
+                    </div>
+                    <input type="text" class="form-control mb-2" id="barberImageInput" placeholder="Image URL">
+                    <button type="button" class="btn btn-success w-100" id="addBarberBtn">
+                        <i class="fas fa-plus"></i> Add Barber
+                    </button>
+                </div>
+                
+                <div id="barbersList">
+                    <div class="alert alert-info">Loading barbers...</div>
                 </div>
             </div>
             
@@ -414,13 +444,6 @@
                 <button type="button" class="btn btn-outline-primary w-100 mt-2" id="manageServicesBtn">
                     Manage Services
                 </button>
-            </div>
-            
-            <div class="profile-card">
-                <h5 class="profile-card-title">Salon Bookings</h5>
-                <div id="salonBookingsList">
-                    <div class="alert alert-info">Loading salon bookings...</div>
-                </div>
             </div>
         </div>
         
@@ -463,10 +486,6 @@
                 <i class="fas fa-home"></i>
                 <span class="nav-text">Home</span>
             </a>
-            <a href="userbookings.html" class="nav-item">
-                <i class="fas fa-calendar"></i>
-                <span class="nav-text">Bookings</span>
-            </a>
             <a href="userprofile.html" class="nav-item active">
                 <i class="fas fa-user"></i>
                 <span class="nav-text">Profile</span>
@@ -506,12 +525,9 @@
         const profileNavItems = document.querySelectorAll('.profile-nav-item');
         const salonTabNav = document.getElementById('salonTabNav');
         const profileTab = document.getElementById('profileTab');
-        const bookingsTab = document.getElementById('bookingsTab');
         const salonTab = document.getElementById('salonTab');
         const settingsTab = document.getElementById('settingsTab');
-        const bookingsList = document.getElementById('bookingsList');
         const salonServicesList = document.getElementById('salonServicesList');
-        const salonBookingsList = document.getElementById('salonBookingsList');
         const addServiceBtn = document.getElementById('addServiceBtn');
         const manageServicesBtn = document.getElementById('manageServicesBtn');
         const salonImage = document.getElementById('salonImage');
@@ -519,17 +535,26 @@
         const salonDescription = document.getElementById('salonDescription');
         const salonAddress = document.getElementById('salonAddress');
         const salonCity = document.getElementById('salonCity');
+        const salonRating = document.getElementById('salonRating');
         const salonHours = document.getElementById('salonHours');
         const salonContact = document.getElementById('salonContact');
         const mapPreview = document.getElementById('mapPreview');
         const toastContainer = document.getElementById('toastContainer');
+        
+        // Barber elements
+        const barbersList = document.getElementById('barbersList');
+        const addBarberBtn = document.getElementById('addBarberBtn');
+        const barberNameInput = document.getElementById('barberNameInput');
+        const barberExperienceInput = document.getElementById('barberExperienceInput');
+        const barberSpecializationInput = document.getElementById('barberSpecializationInput');
+        const barberRatingInput = document.getElementById('barberRatingInput');
+        const barberImageInput = document.getElementById('barberImageInput');
 
         // Global variables
         let currentUser = null;
         let userSalon = null;
         let userSalonServices = [];
-        let userBookings = [];
-        let salonBookings = [];
+        let salonBarbers = [];
 
         // Show toast notification
         function showToast(message, isError = false) {
@@ -580,7 +605,6 @@
                 
                 // Hide all tabs
                 profileTab.style.display = 'none';
-                bookingsTab.style.display = 'none';
                 salonTab.style.display = 'none';
                 settingsTab.style.display = 'none';
                 
@@ -588,10 +612,8 @@
                 document.getElementById(tabId).style.display = 'block';
                 
                 // Load data for specific tabs when they're selected
-                if (tabId === 'bookingsTab') {
-                    loadUserBookings();
-                } else if (tabId === 'salonTab' && userSalon) {
-                    loadSalonBookings();
+                if (tabId === 'salonTab' && userSalon) {
+                    loadSalonBarbers();
                 }
             });
         });
@@ -701,6 +723,7 @@
                 salonDescription.textContent = salonData.description || 'No description provided';
                 salonAddress.textContent = salonData.address || 'Not provided';
                 salonCity.textContent = salonData.city || 'Not provided';
+                salonRating.textContent = salonData.rating ? `${salonData.rating} ⭐` : 'Not rated yet';
                 
                 // Format business hours
                 const openingTime = salonData.opening_time ? salonData.opening_time.substring(0, 5) : '10:00';
@@ -869,140 +892,159 @@
             }
         }
 
-        // Load user bookings
-        async function loadUserBookings() {
-            try {
-                if (!currentUser) return;
-                
-                // Get user's bookings
-                const { data: bookings, error: bookingsError } = await supabase
-                    .from('bookings')
-                    .select(`
-                        *,
-                        salons(name),
-                        salon_services(service_name)
-                    `)
-                    .eq('user_id', currentUser.id)
-                    .order('booking_date', { ascending: false });
-                
-                if (bookingsError) {
-                    throw bookingsError;
-                }
-                
-                userBookings = bookings || [];
-                renderUserBookings();
-                
-            } catch (error) {
-                console.error('Error loading user bookings:', error);
-                bookingsList.innerHTML = '<div class="alert alert-danger">Error loading bookings</div>';
-            }
-        }
-
-        // Render user bookings
-        function renderUserBookings() {
-            if (!bookingsList) return;
-            
-            if (userBookings.length === 0) {
-                bookingsList.innerHTML = '<div class="alert alert-info">You have no bookings yet.</div>';
-                return;
-            }
-            
-            bookingsList.innerHTML = '';
-            
-            userBookings.forEach(booking => {
-                const bookingDate = new Date(booking.booking_date);
-                const formattedDate = bookingDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                
-                const bookingTime = booking.booking_time.substring(0, 5);
-                
-                const bookingItem = document.createElement('div');
-                bookingItem.className = 'booking-item';
-                bookingItem.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6>${booking.salons.name || 'Salon'}</h6>
-                            <p class="mb-1">${booking.salon_services.service_name || 'Service'}</p>
-                            <small class="text-muted">${formattedDate} at ${bookingTime}</small>
-                        </div>
-                        <span class="booking-status status-${booking.status}">${booking.status}</span>
-                    </div>
-                `;
-                bookingsList.appendChild(bookingItem);
-            });
-        }
-
-        // Load salon bookings (for merchants)
-        async function loadSalonBookings() {
+        // Load salon barbers
+        async function loadSalonBarbers() {
             try {
                 if (!userSalon) return;
                 
-                // Get bookings for the salon
-                const { data: bookings, error: bookingsError } = await supabase
-                    .from('bookings')
-                    .select(`
-                        *,
-                        users(full_name, phone),
-                        salon_services(service_name)
-                    `)
+                const { data: barbers, error: barbersError } = await supabase
+                    .from('barbers')
+                    .select('*')
                     .eq('salon_id', userSalon.id)
-                    .order('booking_date', { ascending: false });
+                    .order('name');
                 
-                if (bookingsError) {
-                    throw bookingsError;
+                if (barbersError) {
+                    throw barbersError;
                 }
                 
-                salonBookings = bookings || [];
-                renderSalonBookings();
+                salonBarbers = barbers || [];
+                renderSalonBarbers();
                 
             } catch (error) {
-                console.error('Error loading salon bookings:', error);
-                salonBookingsList.innerHTML = '<div class="alert alert-danger">Error loading salon bookings</div>';
+                console.error('Error loading barbers:', error);
+                barbersList.innerHTML = '<div class="alert alert-danger">Error loading barbers</div>';
             }
         }
 
-        // Render salon bookings
-        function renderSalonBookings() {
-            if (!salonBookingsList) return;
+        // Render salon barbers
+        function renderSalonBarbers() {
+            if (!barbersList) return;
             
-            if (salonBookings.length === 0) {
-                salonBookingsList.innerHTML = '<div class="alert alert-info">No bookings for your salon yet.</div>';
+            if (salonBarbers.length === 0) {
+                barbersList.innerHTML = '<div class="alert alert-info">No barbers added yet. Add your first barber above.</div>';
                 return;
             }
             
-            salonBookingsList.innerHTML = '';
+            barbersList.innerHTML = '';
             
-            salonBookings.forEach(booking => {
-                const bookingDate = new Date(booking.booking_date);
-                const formattedDate = bookingDate.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
-                });
-                
-                const bookingTime = booking.booking_time.substring(0, 5);
-                
-                const bookingItem = document.createElement('div');
-                bookingItem.className = 'booking-item';
-                bookingItem.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6>${booking.users.full_name || 'Customer'}</h6>
-                            <p class="mb-1">${booking.salon_services.service_name || 'Service'}</p>
-                            <small class="text-muted">${formattedDate} at ${bookingTime}</small>
-                            <br>
-                            <small class="text-muted">Phone: ${booking.users.phone || 'Not provided'}</small>
+            salonBarbers.forEach(barber => {
+                const barberCard = document.createElement('div');
+                barberCard.className = 'barber-card';
+                barberCard.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <img src="${barber.image_url || 'https://via.placeholder.com/80'}" class="barber-image" alt="${barber.name}">
+                        <div class="barber-info">
+                            <h6 class="mb-1">${barber.name}</h6>
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="barber-rating me-2">
+                                    ${'★'.repeat(Math.floor(barber.rating))}${barber.rating % 1 >= 0.5 ? '½' : ''}
+                                </span>
+                                <span class="text-muted">${barber.rating.toFixed(1)}</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="barber-experience me-2">${barber.experience_years} years</span>
+                                <span class="text-muted">${barber.specialization || 'General'}</span>
+                            </div>
                         </div>
-                        <span class="booking-status status-${booking.status}">${booking.status}</span>
+                        <i class="fas fa-times remove-barber text-danger" data-id="${barber.id}" style="cursor: pointer;"></i>
                     </div>
                 `;
-                salonBookingsList.appendChild(bookingItem);
+                barbersList.appendChild(barberCard);
+                
+                // Add event listener to remove button
+                const removeBtn = barberCard.querySelector('.remove-barber');
+                if (removeBtn) {
+                    removeBtn.addEventListener('click', async (e) => {
+                        const id = e.target.getAttribute('data-id');
+                        await removeBarber(id);
+                    });
+                }
             });
+        }
+
+        // Add a new barber
+        addBarberBtn.addEventListener('click', async () => {
+            if (!userSalon) {
+                showToast('You need to have a salon registered to add barbers', true);
+                return;
+            }
+            
+            const name = barberNameInput.value.trim();
+            const experience = parseInt(barberExperienceInput.value);
+            const specialization = barberSpecializationInput.value.trim();
+            const rating = parseFloat(barberRatingInput.value);
+            const imageUrl = barberImageInput.value.trim();
+            
+            if (!name) {
+                showToast('Please enter a barber name', true);
+                return;
+            }
+            
+            if (!experience || experience < 0) {
+                showToast('Please enter valid experience years', true);
+                return;
+            }
+            
+            if (!rating || rating < 0 || rating > 5) {
+                showToast('Please enter a rating between 0 and 5', true);
+                return;
+            }
+            
+            try {
+                const { data, error } = await supabase
+                    .from('barbers')
+                    .insert({
+                        salon_id: userSalon.id,
+                        name: name,
+                        experience_years: experience,
+                        specialization: specialization || 'General',
+                        rating: rating,
+                        image_url: imageUrl || null
+                    })
+                    .select();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Refresh barbers list
+                await loadSalonBarbers();
+                
+                // Reset form
+                barberNameInput.value = '';
+                barberExperienceInput.value = '';
+                barberSpecializationInput.value = '';
+                barberRatingInput.value = '';
+                barberImageInput.value = '';
+                
+                showToast('Barber added successfully');
+                
+            } catch (error) {
+                console.error('Error adding barber:', error);
+                showToast('Error adding barber: ' + error.message, true);
+            }
+        });
+
+        // Remove a barber
+        async function removeBarber(barberId) {
+            try {
+                const { error } = await supabase
+                    .from('barbers')
+                    .delete()
+                    .eq('id', barberId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Refresh barbers list
+                await loadSalonBarbers();
+                showToast('Barber removed successfully');
+                
+            } catch (error) {
+                console.error('Error removing barber:', error);
+                showToast('Error removing barber: ' + error.message, true);
+            }
         }
 
         // Logout function
