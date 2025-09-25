@@ -1433,91 +1433,95 @@ v<!DOCTYPE html>
             });
         }
 
+       
+            
+        
+                 
         async function createBooking() {
-            // Get customer details
-            const customerName = document.getElementById('customerName').value.trim();
-            const customerPhone = document.getElementById('customerPhone').value.trim();
-            const customerEmail = document.getElementById('customerEmail').value.trim();
-            const customerUTR = document.getElementById('customerUTR').value.trim();
-            const specialInstructions = document.getElementById('specialInstructions').value.trim();
-            
-            // Validate required fields
-            if (!customerName || !customerPhone || !customerUTR) {
-                showToast('Please fill in all required fields', 'error');
-                return;
-            }
-            
-            // Calculate total amount and duration
-            let totalAmount = 0;
-            let totalDuration = 0;
-            
-            selectedServices.forEach(service => {
-                totalAmount += parseFloat(service.price);
-                totalDuration += service.estimated_time_minutes;
-            });
-            
-            // Token amount (20% of total)
-            const tokenAmount = totalAmount * 0.2;
-            
-            try {
-                // Create booking
-                const { data: booking, error } = await supabase
-                    .from("bookings")
-                    .insert([
-                        {
-                            salon_id: currentSalonId,
-                            barber_id: selectedBarber.id,
-                            customer_id: null, // Would be set if user is logged in
-                            booking_date: selectedDate,
-                            booking_time: selectedTime,
-                            total_amount: totalAmount,
-                            token_amount: tokenAmount,
-                            token_utr: customerUTR,
-                            total_duration_minutes: totalDuration,
-                            status: 'pending',
-                            customer_name: customerName,
-                            customer_phone: customerPhone,
-                            customer_email: customerEmail || null,
-                            special_instructions: specialInstructions || null
-                        }
-                    ])
-                    .select();
-                
-                if (error) {
-                    throw new Error('Error creating booking: ' + error.message);
+    // Get customer details
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerPhone = document.getElementById('customerPhone').value.trim();
+    const customerEmail = document.getElementById('customerEmail').value.trim();
+    const customerUTR = document.getElementById('customerUTR').value.trim();
+    const specialInstructions = document.getElementById('specialInstructions').value.trim();
+    
+    // Validate required fields
+    if (!customerName || !customerPhone || !customerUTR) {
+        showToast('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    // Calculate total amount and duration
+    let totalAmount = 0;
+    let totalDuration = 0;
+    
+    selectedServices.forEach(service => {
+        totalAmount += parseFloat(service.price);
+        totalDuration += service.estimated_time_minutes;
+    });
+    
+    // Token amount (20% of total)
+    const tokenAmount = totalAmount * 0.2;
+    
+    try {
+        // Create booking
+        const { data: booking, error } = await supabase
+            .from("bookings")
+            .insert([
+                {
+                    salon_id: currentSalonId,
+                    barber_id: selectedBarber.id,
+                    customer_id: null,
+                    booking_date: selectedDate,
+                    booking_time: selectedTime,
+                    total_amount: totalAmount,
+                    token_amount: tokenAmount,
+                    token_utr: customerUTR,
+                    total_duration_minutes: totalDuration,
+                    status: 'pending',
+                    customer_name: customerName,
+                    customer_phone: customerPhone,
+                    customer_email: customerEmail || null,
+                    special_instructions: specialInstructions || null
                 }
-                
-                // Create booking services
-                if (booking && booking.length > 0) {
-                    const bookingId = booking[0].id;
-                    
-                    const bookingServices = selectedServices.map(service => ({
-                        booking_id: bookingId,
-                        service_id: service.id,
-                        quantity: 1,
-                        price: service.price
-                    }));
-                    
-                    const { error: servicesError } = await supabase
-                        .from("booking_services")
-                        .insert(bookingServices);
-                    
-                    if (servicesError) {
-                        throw new Error('Error adding services to booking: ' + servicesError.message);
-                    }
-                }
-                
-                showToast('Booking created successfully!', 'success');
-                closeBookingPanel();
-                
-                // Reset form
-                resetBookingForm();
-                
-            } catch (error) {
-                showToast(error.message, 'error');
-                console.error('Booking error:', error);
+            ])
+            .select();
+        
+        if (error) {
+            console.error('Booking creation error:', error);
+            throw new Error('Error creating booking: ' + error.message);
+        }
+        
+        // Create booking services
+        if (booking && booking.length > 0) {
+            const bookingId = booking[0].id;
+            
+            const bookingServices = selectedServices.map(service => ({
+                booking_id: bookingId,
+                service_id: service.id,
+                quantity: 1,
+                price: service.price
+            }));
+            
+            const { error: servicesError } = await supabase
+                .from("booking_services")
+                .insert(bookingServices);
+            
+            if (servicesError) {
+                console.error('Booking services error:', servicesError);
+                throw new Error('Error adding services to booking: ' + servicesError.message);
             }
         }
+        
+        showToast('Booking created successfully!', 'success');
+        closeBookingPanel();
+        resetBookingForm();
+        
+    } catch (error) {
+        showToast(error.message, 'error');
+        console.error('Booking error:', error);
+    }
+}
 
         function checkIfOpen(salon) {
             const now = new Date();
