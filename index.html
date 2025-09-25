@@ -495,10 +495,56 @@
             margin-top: 10px;
         }
         
+        /* Mobile-specific fixes */
+        @media (max-width: 768px) {
+            .salon-card {
+                margin-bottom: 15px;
+            }
+            
+            .booking-panel {
+                width: 100%;
+                right: -100%;
+            }
+            
+            .time-slot {
+                padding: 10px 15px;
+                margin: 3px;
+                font-size: 0.9rem;
+            }
+            
+            .modal-dialog {
+                margin: 10px;
+            }
+            
+            .search-input {
+                padding: 15px 15px 15px 45px;
+            }
+        }
+        
         @media (min-width: 768px) {
             .booking-panel {
                 width: 500px;
                 right: -500px;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        .btn, .barber-card, .time-slot:not(.booked) {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-item {
+            min-height: 60px;
+            min-width: 60px;
+        }
+        
+        /* Prevent zoom on input focus for mobile */
+        @media (max-width: 768px) {
+            input, select, textarea {
+                font-size: 16px;
             }
         }
     </style>
@@ -637,12 +683,12 @@
                 <p class="text-muted mb-3">Please provide your contact information</p>
                 
                 <div class="form-group">
-                    <label class="form-label">Full Name</label>
+                    <label class="form-label">Full Name *</label>
                     <input type="text" class="form-control" id="customerName" required>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Phone Number</label>
+                    <label class="form-label">Phone Number *</label>
                     <input type="tel" class="form-control" id="customerPhone" required>
                 </div>
                 
@@ -652,7 +698,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">UTR Number (Advance Payment Proof)</label>
+                    <label class="form-label">UTR Number (Advance Payment Proof) *</label>
                     <input type="text" class="form-control" id="customerUTR" required>
                     <small class="text-muted">This UTR will only be visible to you and the selected barber</small>
                 </div>
@@ -741,6 +787,8 @@
             // Set minimum date for booking to today
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('bookingDate').min = today;
+            document.getElementById('bookingDate').value = today;
+            selectedDate = today;
             
             // Booking panel navigation
             document.getElementById('nextToStep2').addEventListener('click', function() {
@@ -769,12 +817,17 @@
             
             document.getElementById('nextToStep4').addEventListener('click', function() {
                 // Validate form
-                const name = document.getElementById('customerName').value;
-                const phone = document.getElementById('customerPhone').value;
-                const utr = document.getElementById('customerUTR').value;
+                const name = document.getElementById('customerName').value.trim();
+                const phone = document.getElementById('customerPhone').value.trim();
+                const utr = document.getElementById('customerUTR').value.trim();
                 
                 if (!name || !phone || !utr) {
                     showToast('Please fill in all required fields', 'error');
+                    return;
+                }
+                
+                if (!isValidPhone(phone)) {
+                    showToast('Please enter a valid phone number', 'error');
                     return;
                 }
                 
@@ -804,7 +857,28 @@
                 selectedDate = this.value;
                 loadTimeSlots();
             });
+            
+            // Mobile touch improvements
+            improveMobileTouch();
         });
+
+        function improveMobileTouch() {
+            // Improve touch experience for mobile
+            document.querySelectorAll('.barber-card, .time-slot:not(.booked), .btn').forEach(element => {
+                element.style.cursor = 'pointer';
+                element.addEventListener('touchstart', function() {
+                    this.style.transform = 'scale(0.98)';
+                });
+                element.addEventListener('touchend', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+        }
+
+        function isValidPhone(phone) {
+            const phoneRegex = /^[0-9]{10}$/;
+            return phoneRegex.test(phone.replace(/\D/g, ''));
+        }
 
         async function searchSalons() {
             const query = document.getElementById("searchInput").value.trim();
@@ -898,7 +972,7 @@
                 salonCard.innerHTML = `
                     <div class="salon-card">
                         <img src="${salon.image_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
-                             class="salon-image" alt="${salon.name}">
+                             class="salon-image" alt="${salon.name}" loading="lazy">
                         <div class="salon-info">
                             <h5 class="salon-name">${salon.name}</h5>
                             <p class="salon-location">
@@ -968,7 +1042,7 @@
                     <div class="row">
                         <div class="col-md-6">
                             <img src="${salon.image_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
-                                 class="img-fluid rounded mb-3" alt="${salon.name}">
+                                 class="img-fluid rounded mb-3" alt="${salon.name}" loading="lazy">
                             <div class="d-flex mb-3">
                                 <span class="status-badge ${isOpen ? 'status-open' : 'status-closed'} me-2">
                                     ${isOpen ? 'Open Now' : 'Closed'}
@@ -1110,7 +1184,7 @@
                     barberCard.innerHTML = `
                         <div class="d-flex align-items-center">
                             <img src="${barber.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'}" 
-                                 class="barber-image" alt="${barber.name}">
+                                 class="barber-image" alt="${barber.name}" loading="lazy">
                             <div>
                                 <h6 class="mb-1">${barber.name}</h6>
                                 <p class="mb-1 text-muted">${barber.experience_years} years experience</p>
@@ -1137,6 +1211,9 @@
             // Reset booking form
             resetBookingForm();
             
+            // Load time slots for today
+            loadTimeSlots();
+            
             // Show booking panel
             document.getElementById('bookingPanel').classList.add('active');
             document.getElementById('bookingOverlay').classList.add('active');
@@ -1151,7 +1228,6 @@
         function resetBookingForm() {
             // Reset all selections
             selectedBarber = null;
-            selectedDate = null;
             selectedTime = null;
             
             // Reset form fields
@@ -1190,7 +1266,7 @@
             document.getElementById(`step${stepNumber}`).classList.add('active');
             
             // Load time slots if navigating to step 2
-            if (stepNumber === 2 && selectedDate) {
+            if (stepNumber === 2) {
                 loadTimeSlots();
             }
         }
@@ -1212,12 +1288,13 @@
                 availableTimeSlots.push(timeString);
             }
             
-            // Fetch existing bookings for the selected date and barber
+            // Fetch existing bookings for the selected date
             if (selectedBarber) {
                 let { data: bookings, error } = await supabase
                     .from("bookings")
                     .select("booking_time")
                     .eq("salon_id", currentSalonId)
+                    .eq("barber_id", selectedBarber.id)
                     .eq("booking_date", selectedDate)
                     .eq("status", "confirmed");
                 
@@ -1281,11 +1358,17 @@
 
         async function createBooking() {
             // Get customer details
-            const customerName = document.getElementById('customerName').value;
-            const customerPhone = document.getElementById('customerPhone').value;
-            const customerEmail = document.getElementById('customerEmail').value;
-            const customerUTR = document.getElementById('customerUTR').value;
-            const specialInstructions = document.getElementById('specialInstructions').value;
+            const customerName = document.getElementById('customerName').value.trim();
+            const customerPhone = document.getElementById('customerPhone').value.trim();
+            const customerEmail = document.getElementById('customerEmail').value.trim();
+            const customerUTR = document.getElementById('customerUTR').value.trim();
+            const specialInstructions = document.getElementById('specialInstructions').value.trim();
+            
+            // Validate required fields
+            if (!customerName || !customerPhone || !customerUTR) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
             
             // Calculate total amount
             let totalAmount = 0;
@@ -1296,58 +1379,63 @@
             // Token amount (20% of total)
             const tokenAmount = totalAmount * 0.2;
             
-            // Create booking
-            const { data: booking, error } = await supabase
-                .from("bookings")
-                .insert([
-                    {
-                        salon_id: currentSalonId,
-                        customer_id: null, // Would be set if user is logged in
-                        booking_date: selectedDate,
-                        booking_time: selectedTime,
-                        total_amount: totalAmount,
-                        token_amount: tokenAmount,
-                        token_utr: customerUTR,
-                        status: 'pending',
-                        customer_name: customerName,
-                        customer_phone: customerPhone,
-                        customer_email: customerEmail,
-                        special_instructions: specialInstructions
-                    }
-                ])
-                .select();
-            
-            if (error) {
-                showToast('Error creating booking: ' + error.message, 'error');
-                return;
-            }
-            
-            // Create booking services
-            if (booking && booking.length > 0) {
-                const bookingId = booking[0].id;
+            try {
+                // Create booking
+                const { data: booking, error } = await supabase
+                    .from("bookings")
+                    .insert([
+                        {
+                            salon_id: currentSalonId,
+                            barber_id: selectedBarber.id,
+                            customer_id: null, // Would be set if user is logged in
+                            booking_date: selectedDate,
+                            booking_time: selectedTime,
+                            total_amount: totalAmount,
+                            token_amount: tokenAmount,
+                            token_utr: customerUTR,
+                            status: 'pending',
+                            customer_name: customerName,
+                            customer_phone: customerPhone,
+                            customer_email: customerEmail || null,
+                            special_instructions: specialInstructions || null
+                        }
+                    ])
+                    .select();
                 
-                const bookingServices = selectedServices.map(service => ({
-                    booking_id: bookingId,
-                    service_id: service.id,
-                    quantity: 1,
-                    price: service.price
-                }));
-                
-                const { error: servicesError } = await supabase
-                    .from("booking_services")
-                    .insert(bookingServices);
-                
-                if (servicesError) {
-                    showToast('Error adding services to booking: ' + servicesError.message, 'error');
-                    return;
+                if (error) {
+                    throw new Error('Error creating booking: ' + error.message);
                 }
+                
+                // Create booking services
+                if (booking && booking.length > 0) {
+                    const bookingId = booking[0].id;
+                    
+                    const bookingServices = selectedServices.map(service => ({
+                        booking_id: bookingId,
+                        service_id: service.id,
+                        quantity: 1,
+                        price: service.price
+                    }));
+                    
+                    const { error: servicesError } = await supabase
+                        .from("booking_services")
+                        .insert(bookingServices);
+                    
+                    if (servicesError) {
+                        throw new Error('Error adding services to booking: ' + servicesError.message);
+                    }
+                }
+                
+                showToast('Booking created successfully!', 'success');
+                closeBookingPanel();
+                
+                // Reset form
+                resetBookingForm();
+                
+            } catch (error) {
+                showToast(error.message, 'error');
+                console.error('Booking error:', error);
             }
-            
-            showToast('Booking created successfully!', 'success');
-            closeBookingPanel();
-            
-            // Reset form
-            resetBookingForm();
         }
 
         function checkIfOpen(salon) {
