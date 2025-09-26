@@ -412,7 +412,9 @@
                     return false;
                 }
                 
-                // Get user data from users table
+                console.log('User session:', session.user.id);
+                
+                // Get user data from users table using auth_uid
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('*')
@@ -420,10 +422,12 @@
                     .single();
                 
                 if (userError) {
+                    console.error('Error fetching user data:', userError);
                     throw userError;
                 }
                 
                 currentUserData = userData;
+                console.log('Current user data:', currentUserData);
                 
                 // Set user type based on account_type
                 if (userData.account_type === 'salon_owner') {
@@ -508,6 +512,9 @@
             `;
             
             try {
+                console.log('Loading bookings for user type:', currentUserType);
+                console.log('Current user ID:', currentUserData?.id);
+                
                 let query = supabase
                     .from('bookings')
                     .select(`
@@ -520,25 +527,34 @@
                         )
                     `);
                 
-                // Filter by user type
+                // Filter by user type - CORRECTED USER-BOOKING RELATIONSHIP
                 if (currentUserType === 'customer') {
-                    // For customers, show only their bookings
+                    // For customers, show only their bookings using customer_id
+                    console.log('Filtering by customer_id:', currentUserData.id);
                     query = query.eq('customer_id', currentUserData.id);
                 } else {
                     // For salon owners, show bookings for their salons
-                    // First, get the owner's salons
+                    console.log('Loading salon owner bookings');
+                    // First, get the owner's salons using user_id
                     const { data: ownerSalons, error: salonError } = await supabase
                         .from('salons')
                         .select('id')
                         .eq('user_id', currentUserData.id);
                     
-                    if (salonError) throw salonError;
+                    if (salonError) {
+                        console.error('Error fetching owner salons:', salonError);
+                        throw salonError;
+                    }
+                    
+                    console.log('Owner salons:', ownerSalons);
                     
                     if (ownerSalons && ownerSalons.length > 0) {
                         const salonIds = ownerSalons.map(salon => salon.id);
+                        console.log('Filtering by salon IDs:', salonIds);
                         query = query.in('salon_id', salonIds);
                     } else {
                         // Owner has no salons, so no bookings to show
+                        console.log('No salons found for this owner');
                         currentBookings = [];
                         displayBookings();
                         return;
@@ -548,9 +564,11 @@
                 const { data, error } = await query.order('booking_date', { ascending: false });
                 
                 if (error) {
+                    console.error('Supabase query error:', error);
                     throw new Error('Error fetching bookings: ' + error.message);
                 }
                 
+                console.log('Bookings loaded:', data);
                 currentBookings = data || [];
                 displayBookings();
                 
@@ -560,6 +578,7 @@
                     <div class="alert alert-danger" role="alert">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         Error loading bookings: ${error.message}
+                        <br><small>Check console for details</small>
                     </div>
                 `;
             }
@@ -574,10 +593,10 @@
                     <div class="empty-state">
                         <i class="far fa-calendar-check"></i>
                         <h4>No Bookings Found</h4>
-                        <p class="text-muted">You don't have any bookings yet.</p>
+                        <p class="text-muted">You don't have any ${currentActiveTab} bookings yet.</p>
                         ${currentUserType === 'customer' ? 
                             '<button class="btn btn-dark px-4" onclick="window.location.href=\'index.html\'">Book Now</button>' : 
-                            ''}
+                            '<p class="text-muted">When customers book your salon services, they will appear here.</p>'}
                     </div>
                 `;
                 return;
