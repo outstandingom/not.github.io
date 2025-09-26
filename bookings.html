@@ -527,7 +527,7 @@
                         )
                     `);
                 
-                // Filter by user type - CORRECTED USER-BOOKING RELATIONSHIP
+                // Fixed: Proper user-booking relationship filtering
                 if (currentUserType === 'customer') {
                     // For customers, show only their bookings using customer_id
                     console.log('Filtering by customer_id:', currentUserData.id);
