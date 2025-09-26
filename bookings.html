@@ -180,7 +180,6 @@
             margin-bottom: 3px;
         }
         
-        
         .tab-nav {
             display: flex;
             border-bottom: 1px solid var(--border);
@@ -250,6 +249,31 @@
                 justify-content: center;
             }
         }
+        
+        /* New styles for enhanced functionality */
+        .booking-details-modal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .service-item:last-child {
+            border-bottom: none;
+        }
+        
+        .total-amount {
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-top: 2px solid var(--border);
+            padding-top: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -284,7 +308,7 @@
         <!-- User Type Indicator -->
         <div class="alert alert-info d-flex align-items-center" role="alert">
             <i class="fas fa-info-circle me-2"></i>
-            <div  id="salonTab" >
+            <div id="salonTab">
                 You are viewing as: <strong id="userTypeIndicator">Customer</strong>
                 <button class="btn btn-sm btn-outline-primary ms-2" id="toggleUserType">Switch to Salon Owner View</button>
             </div>
@@ -304,7 +328,6 @@
     <!-- Toast Container for Notifications -->
     <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
 
-   
     <!-- Confirmation Modal -->
     <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -323,16 +346,35 @@
             </div>
         </div>
     </div>
-     <!-- Bottom Navigation -->
+    
+    <!-- Booking Details Modal -->
+    <div class="modal fade booking-details-modal" id="bookingDetailsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bookingDetailsModalLabel">Booking Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="bookingDetailsModalBody">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bottom Navigation -->
     <nav class="bottom-nav">
-        <a href="index.html" class="nav-item active">
+        <a href="index.html" class="nav-item">
             <i class="fas fa-search"></i>
             <span>Search</span>
         </a>
-        <a href="#" class="nav-item">
-                <i class="fas fa-calendar"></i>
-                <span class="nav-text">Bookings</span>
-            </a>
+        <a href="#" class="nav-item active">
+            <i class="fas fa-calendar"></i>
+            <span>Bookings</span>
+        </a>
         <a href="profile.html" class="nav-item">
             <i class="fas fa-user"></i>
             <span>Profile</span>
@@ -352,121 +394,65 @@
         let currentBookings = [];
         let currentActiveTab = 'upcoming';
         let currentBookingToUpdate = null;
+        let currentUserData = null;
 
-// Function to check if user is logged in
-async function checkUserLogin() {
-    try {
-        // Get current user session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-            throw sessionError;
+        // Check if user is logged in and get user data
+        async function checkUserLogin() {
+            try {
+                // Get current user session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    // Redirect to login if no session
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                // Get user data from users table
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('auth_uid', session.user.id)
+                    .single();
+                
+                if (userError) {
+                    throw userError;
+                }
+                
+                currentUserData = userData;
+                
+                // Set user type based on account_type
+                if (userData.account_type === 'salon_owner') {
+                    currentUserType = 'owner';
+                } else {
+                    currentUserType = 'customer';
+                }
+                
+                updateUserTypeIndicator();
+                
+                return {
+                    session: session,
+                    user: session.user,
+                    userData: userData
+                };
+                
+            } catch (error) {
+                console.error('Error checking user login:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
         }
-        
-        if (!session) {
-            // Redirect to login if no session
-            window.location.href = 'login.html';
-            return false;
-        }
-        
-        // Get user data from users table
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('auth_uid', session.user.id)
-            .single();
-        
-        if (userError) {
-            throw userError;
-        }
-        
-        return {
-            session: session,
-            user: session.user,
-            userData: userData
-        };
-        
-    } catch (error) {
-        console.error('Error checking user login:', error);
-        window.location.href = 'login.html';
-        return false;
-    }
-}
 
-// Simplified version that returns only boolean
-async function isUserLoggedIn() {
-    try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session) {
-            return false;
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('Error checking login status:', error);
-        return false;
-    }
-}
-
-// Usage examples for your other pages:
-
-// Example 1: Basic protection for a page
-async function protectPage() {
-    const isLoggedIn = await isUserLoggedIn();
-    if (!isLoggedIn) {
-        return; // Redirect happens automatically in the function
-    }
-    // Continue with page logic for logged-in users
-}
-
-// Example 2: Get user data for personalized content
-async function loadProtectedContent() {
-    const userInfo = await checkUserLogin();
-    if (!userInfo) {
-        return; // User not logged in, redirect happened
-    }
-    
-    // Now you have access to:
-    // userInfo.session - the auth session
-    // userInfo.user - the user object
-    // userInfo.userData - the user data from your database
-    
-    console.log('User is logged in:', userInfo.userData.full_name);
-    // Load your protected content here
-}
-
-// Example 3: Protect specific functionality
-async function performProtectedAction() {
-    if (!await isUserLoggedIn()) {
-        showToast('Please login to use this feature', true);
-        return;
-    }
-    
-    // Execute protected action
-    // ...
-}
-
-// Example 4: Initialize page with protection
-document.addEventListener('DOMContentLoaded', async function() {
-    // Check if user is logged in before loading page content
-    const userInfo = await checkUserLogin();
-    if (!userInfo) {
-        return; // Redirected to login page
-    }
-    
-    // User is logged in, load the page content
-    loadPageContent(userInfo);
-});
-
-function loadPageContent(userInfo) {
-    // Your page initialization logic here
-    // You have access to userInfo for personalized content
-}
-
-        
         // Load bookings on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check if user is logged in
+            const userInfo = await checkUserLogin();
+            if (!userInfo) return;
+            
             // Set up tab switching
             document.querySelectorAll('.tab-item').forEach(tab => {
                 tab.addEventListener('click', function() {
@@ -526,17 +512,38 @@ function loadPageContent(userInfo) {
                     .from('bookings')
                     .select(`
                         *,
-                        salons(name, address, city, image_url),
-                        barbers(name, specialization, experience_years),
+                        salons(name, address, city, image_url, contact_phone),
+                        barbers(name, specialization, experience_years, image_url),
                         booking_services(
                             service_id,
                             salon_services(service_name, price)
                         )
                     `);
                 
-                // If user is a salon owner, we might want to filter by their salon
-                // For now, we'll just get all bookings
-                // In a real app, you would filter by the owner's salon ID
+                // Filter by user type
+                if (currentUserType === 'customer') {
+                    // For customers, show only their bookings
+                    query = query.eq('customer_id', currentUserData.id);
+                } else {
+                    // For salon owners, show bookings for their salons
+                    // First, get the owner's salons
+                    const { data: ownerSalons, error: salonError } = await supabase
+                        .from('salons')
+                        .select('id')
+                        .eq('user_id', currentUserData.id);
+                    
+                    if (salonError) throw salonError;
+                    
+                    if (ownerSalons && ownerSalons.length > 0) {
+                        const salonIds = ownerSalons.map(salon => salon.id);
+                        query = query.in('salon_id', salonIds);
+                    } else {
+                        // Owner has no salons, so no bookings to show
+                        currentBookings = [];
+                        displayBookings();
+                        return;
+                    }
+                }
                 
                 const { data, error } = await query.order('booking_date', { ascending: false });
                 
@@ -582,9 +589,9 @@ function loadPageContent(userInfo) {
             if (currentActiveTab === 'upcoming') {
                 const today = new Date().toISOString().split('T')[0];
                 filteredBookings = currentBookings.filter(booking => 
-                    booking.status === 'pending' || 
-                    booking.status === 'confirmed' ||
-                    (booking.status !== 'cancelled' && booking.booking_date >= today)
+                    (booking.status === 'pending' || 
+                     booking.status === 'confirmed') &&
+                    booking.booking_date >= today
                 );
             } else if (currentActiveTab === 'completed') {
                 filteredBookings = currentBookings.filter(booking => 
@@ -708,9 +715,9 @@ function loadPageContent(userInfo) {
                 <div class="booking-card-header d-flex justify-content-between align-items-center">
                     <div>
                         <span class="booking-status ${statusClass}">${booking.status.toUpperCase()}</span>
-                        <span class="text-muted ms-2">Booking ID: #PC${String(booking.id).padStart(5, '0')}</span>
+                        <span class="text-muted ms-2">Booking ID: #PC${String(booking.id).substring(0, 8)}</span>
                     </div>
-                    <div class="text-muted">Booked on: ${bookingDate}</div>
+                    <div class="text-muted">Booked on: ${new Date(booking.created_at).toLocaleDateString('en-IN')}</div>
                 </div>
                 <div class="booking-card-body">
                     <div class="row">
@@ -723,7 +730,7 @@ function loadPageContent(userInfo) {
                                 booking.booking_services[0].salon_services?.service_name : 'Haircut Service'}</h5>
                             <div class="booking-detail">
                                 <div class="booking-detail-label">Salon</div>
-                                <div class="booking-detail-value">${booking.salons?.name || 'Unknown Salon'}, ${booking.salons?.address || ''}</div>
+                                <div class="booking-detail-value">${booking.salons?.name || 'Unknown Salon'}, ${booking.salons?.city || ''}</div>
                             </div>
                             <div class="booking-detail">
                                 <div class="booking-detail-label">Date & Time</div>
@@ -764,7 +771,7 @@ function loadPageContent(userInfo) {
             const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
             const modalBody = document.getElementById('confirmationModalBody');
             
-            modalBody.textContent = `Are you sure you want to change the status of booking #PC${String(bookingId).padStart(5, '0')} to ${newStatus.toUpperCase()}?`;
+            modalBody.textContent = `Are you sure you want to change the status of booking #PC${String(bookingId).substring(0, 8)} to ${newStatus.toUpperCase()}?`;
             
             modal.show();
         }
@@ -774,7 +781,10 @@ function loadPageContent(userInfo) {
             try {
                 const { error } = await supabase
                     .from('bookings')
-                    .update({ status: newStatus })
+                    .update({ 
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
                     .eq('id', bookingId);
                 
                 if (error) {
@@ -806,9 +816,10 @@ function loadPageContent(userInfo) {
             // Find the booking
             const booking = currentBookings.find(b => b.id === bookingId);
             if (booking) {
-                // In a real app, you would redirect to booking page with pre-filled data
+                // Redirect to booking page with pre-filled data
                 showToast('Redirecting to booking page...', 'success');
-                // window.location.href = `index.html?salonId=${booking.salon_id}`;
+                // In a real app, you would pass the salon ID and other details
+                window.location.href = `index.html?salonId=${booking.salon_id}`;
             }
         }
 
@@ -817,9 +828,140 @@ function loadPageContent(userInfo) {
             // Find the booking
             const booking = currentBookings.find(b => b.id === bookingId);
             if (booking) {
-                // In a real app, you would show a detailed modal or redirect to a details page
-                alert(`Booking Details for #PC${String(bookingId).padStart(5, '0')}\n\nStatus: ${booking.status}\nDate: ${booking.booking_date}\nTime: ${booking.booking_time}\nCustomer: ${booking.customer_name}\nPhone: ${booking.customer_phone}`);
+                // Generate detailed HTML for the modal
+                const modalBody = document.getElementById('bookingDetailsModalBody');
+                
+                // Calculate total amount
+                let totalAmount = 0;
+                let servicesHTML = '';
+                
+                if (booking.booking_services && booking.booking_services.length > 0) {
+                    booking.booking_services.forEach(service => {
+                        const servicePrice = service.salon_services?.price || 0;
+                        totalAmount += servicePrice;
+                        servicesHTML += `
+                            <div class="service-item">
+                                <span>${service.salon_services?.service_name || 'Service'}</span>
+                                <span>₹${servicePrice}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    servicesHTML = '<div class="text-muted">No services listed</div>';
+                    totalAmount = booking.total_amount || 0;
+                }
+                
+                // Format dates
+                const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                
+                const bookingTime = formatTime(booking.booking_time);
+                const createdDate = new Date(booking.created_at).toLocaleDateString('en-IN');
+                
+                modalBody.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Booking Information</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Booking ID</div>
+                                <div class="booking-detail-value">#PC${String(booking.id).substring(0, 8)}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Status</div>
+                                <div class="booking-detail-value"><span class="booking-status ${getStatusClass(booking.status)}">${booking.status.toUpperCase()}</span></div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Date & Time</div>
+                                <div class="booking-detail-value">${bookingDate} at ${bookingTime}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Booked On</div>
+                                <div class="booking-detail-value">${createdDate}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Salon Information</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Salon Name</div>
+                                <div class="booking-detail-value">${booking.salons?.name || 'Unknown Salon'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Address</div>
+                                <div class="booking-detail-value">${booking.salons?.address || 'Not specified'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Contact</div>
+                                <div class="booking-detail-value">${booking.salons?.contact_phone || 'Not specified'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Professional</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Barber</div>
+                                <div class="booking-detail-value">${booking.barbers?.name || 'Unknown Barber'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Specialization</div>
+                                <div class="booking-detail-value">${booking.barbers?.specialization || 'Not specified'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Experience</div>
+                                <div class="booking-detail-value">${booking.barbers?.experience_years || '0'} years</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Customer Information</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Name</div>
+                                <div class="booking-detail-value">${booking.customer_name}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Phone</div>
+                                <div class="booking-detail-value">${booking.customer_phone}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Email</div>
+                                <div class="booking-detail-value">${booking.customer_email || 'Not specified'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Services</h6>
+                        ${servicesHTML}
+                        <div class="service-item total-amount">
+                            <span>Total Amount</span>
+                            <span>₹${totalAmount}</span>
+                        </div>
+                    </div>
+                    
+                    ${booking.special_instructions ? `
+                        <div class="mt-3">
+                            <h6>Special Instructions</h6>
+                            <p>${booking.special_instructions}</p>
+                        </div>
+                    ` : ''}
+                `;
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
+                modal.show();
             }
+        }
+
+        // Helper function to get status class
+        function getStatusClass(status) {
+            if (status === 'confirmed') return 'status-confirmed';
+            if (status === 'cancelled') return 'status-cancelled';
+            if (status === 'completed') return 'status-completed';
+            return 'status-pending';
         }
 
         // Format time helper function
