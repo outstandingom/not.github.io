@@ -1,4 +1,4 @@
-v<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -475,6 +475,11 @@ v<!DOCTYPE html>
             border-radius: 6px;
         }
         
+        .form-control:read-only {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        
         .booking-summary {
             background-color: #f9f9f9;
             border-radius: 8px;
@@ -733,16 +738,16 @@ v<!DOCTYPE html>
             
             <div id="step4" class="step-content">
                 <h5>Your Details</h5>
-                <p class="text-muted mb-3">Please provide your contact information</p>
+                <p class="text-muted mb-3">Your name and phone number are fetched from your profile</p>
                 
                 <div class="form-group">
                     <label class="form-label">Full Name *</label>
-                    <input type="text" class="form-control" id="customerName" required>
+                    <input type="text" class="form-control" id="customerName" readonly>
                 </div>
                 
                 <div class="form-group">
                     <label class="form-label">Phone Number *</label>
-                    <input type="tel" class="form-control" id="customerPhone" required>
+                    <input type="tel" class="form-control" id="customerPhone" readonly>
                 </div>
                 
                 <div class="form-group">
@@ -785,124 +790,58 @@ v<!DOCTYPE html>
         let selectedServices = [];
         let availableTimeSlots = [];
         let existingBookings = [];
+        let currentUser = null;
 
-
-        // Function to check if user is logged in
-async function checkUserLogin() {
-    try {
-        // Get current user session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-            throw sessionError;
+        // Function to check if user is logged in and get user data
+        async function checkUserLogin() {
+            try {
+                // Get current user session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    // Redirect to login if no session
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                // Get user data from users table
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('auth_uid', session.user.id)
+                    .single();
+                
+                if (userError) {
+                    throw userError;
+                }
+                
+                return {
+                    session: session,
+                    user: session.user,
+                    userData: userData
+                };
+                
+            } catch (error) {
+                console.error('Error checking user login:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
         }
-        
-        if (!session) {
-            // Redirect to login if no session
-            window.location.href = 'login.html';
-            return false;
-        }
-        
-        // Get user data from users table
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('auth_uid', session.user.id)
-            .single();
-        
-        if (userError) {
-            throw userError;
-        }
-        
-        return {
-            session: session,
-            user: session.user,
-            userData: userData
-        };
-        
-    } catch (error) {
-        console.error('Error checking user login:', error);
-        window.location.href = 'login.html';
-        return false;
-    }
-}
 
-// Simplified version that returns only boolean
-async function isUserLoggedIn() {
-    try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session) {
-            return false;
-        }
-        
-        return true;
-    } catch (error) {
-        console.error('Error checking login status:', error);
-        return false;
-    }
-}
-
-// Usage examples for your other pages:
-
-// Example 1: Basic protection for a page
-async function protectPage() {
-    const isLoggedIn = await isUserLoggedIn();
-    if (!isLoggedIn) {
-        return; // Redirect happens automatically in the function
-    }
-    // Continue with page logic for logged-in users
-}
-
-// Example 2: Get user data for personalized content
-async function loadProtectedContent() {
-    const userInfo = await checkUserLogin();
-    if (!userInfo) {
-        return; // User not logged in, redirect happened
-    }
-    
-    // Now you have access to:
-    // userInfo.session - the auth session
-    // userInfo.user - the user object
-    // userInfo.userData - the user data from your database
-    
-    console.log('User is logged in:', userInfo.userData.full_name);
-    // Load your protected content here
-}
-
-// Example 3: Protect specific functionality
-async function performProtectedAction() {
-    if (!await isUserLoggedIn()) {
-        showToast('Please login to use this feature', true);
-        return;
-    }
-    
-    // Execute protected action
-    // ...
-}
-
-// Example 4: Initialize page with protection
-document.addEventListener('DOMContentLoaded', async function() {
-    // Check if user is logged in before loading page content
-    const userInfo = await checkUserLogin();
-    if (!userInfo) {
-        return; // Redirected to login page
-    }
-    
-    // User is logged in, load the page content
-    loadPageContent(userInfo);
-});
-
-function loadPageContent(userInfo) {
-    // Your page initialization logic here
-    // You have access to userInfo for personalized content
-
-}
-        
-        
-        
         // Load all salons on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check if user is logged in
+            const userInfo = await checkUserLogin();
+            if (!userInfo) {
+                return; // Redirected to login page
+            }
+            
+            currentUser = userInfo.userData;
+            
             loadAllSalons();
             
             // Add event listener for search input
@@ -959,17 +898,10 @@ function loadPageContent(userInfo) {
             
             document.getElementById('confirmBooking').addEventListener('click', function() {
                 // Validate form
-                const name = document.getElementById('customerName').value.trim();
-                const phone = document.getElementById('customerPhone').value.trim();
                 const utr = document.getElementById('customerUTR').value.trim();
                 
-                if (!name || !phone || !utr) {
-                    showToast('Please fill in all required fields', 'error');
-                    return;
-                }
-                
-                if (!isValidPhone(phone)) {
-                    showToast('Please enter a valid phone number', 'error');
+                if (!utr) {
+                    showToast('Please fill in the UTR field', 'error');
                     return;
                 }
                 
@@ -1006,11 +938,6 @@ function loadPageContent(userInfo) {
                     this.style.transform = 'scale(1)';
                 });
             });
-        }
-
-        function isValidPhone(phone) {
-            const phoneRegex = /^[0-9]{10}$/;
-            return phoneRegex.test(phone.replace(/\D/g, ''));
         }
 
         async function searchSalons() {
@@ -1385,6 +1312,11 @@ function loadPageContent(userInfo) {
                 });
             }
             
+            // Pre-fill user details
+            document.getElementById('customerName').value = currentUser.full_name || '';
+            document.getElementById('customerPhone').value = currentUser.phone || '';
+            document.getElementById('customerEmail').value = currentUser.email || '';
+            
             // Reset booking form
             resetBookingForm();
             
@@ -1418,10 +1350,7 @@ function loadPageContent(userInfo) {
             selectedServices = [];
             selectedTime = null;
             
-            // Reset form fields
-            document.getElementById('customerName').value = '';
-            document.getElementById('customerPhone').value = '';
-            document.getElementById('customerEmail').value = '';
+            // Reset form fields (except user details which are pre-filled)
             document.getElementById('customerUTR').value = '';
             document.getElementById('specialInstructions').value = '';
             
@@ -1552,95 +1481,88 @@ function loadPageContent(userInfo) {
             });
         }
 
-       
-            
-        
-                 
         async function createBooking() {
-    // Get customer details
-    const customerName = document.getElementById('customerName').value.trim();
-    const customerPhone = document.getElementById('customerPhone').value.trim();
-    const customerEmail = document.getElementById('customerEmail').value.trim();
-    const customerUTR = document.getElementById('customerUTR').value.trim();
-    const specialInstructions = document.getElementById('specialInstructions').value.trim();
-    
-    // Validate required fields
-    if (!customerName || !customerPhone || !customerUTR) {
-        showToast('Please fill in all required fields', 'error');
-        return;
-    }
-    
-    // Calculate total amount and duration
-    let totalAmount = 0;
-    let totalDuration = 0;
-    
-    selectedServices.forEach(service => {
-        totalAmount += parseFloat(service.price);
-        totalDuration += service.estimated_time_minutes;
-    });
-    
-    // Token amount (20% of total)
-    const tokenAmount = totalAmount * 0.2;
-    
-    try {
-        // Create booking
-        const { data: booking, error } = await supabase
-            .from("bookings")
-            .insert([
-                {
-                    salon_id: currentSalonId,
-                    barber_id: selectedBarber.id,
-                    customer_id: null,
-                    booking_date: selectedDate,
-                    booking_time: selectedTime,
-                    total_amount: totalAmount,
-                    token_amount: tokenAmount,
-                    token_utr: customerUTR,
-                    total_duration_minutes: totalDuration,
-                    status: 'pending',
-                    customer_name: customerName,
-                    customer_phone: customerPhone,
-                    customer_email: customerEmail || null,
-                    special_instructions: specialInstructions || null
+            // Get customer details
+            const customerUTR = document.getElementById('customerUTR').value.trim();
+            const specialInstructions = document.getElementById('specialInstructions').value.trim();
+            
+            // Validate required fields
+            if (!customerUTR) {
+                showToast('Please fill in the UTR field', 'error');
+                return;
+            }
+            
+            // Calculate total amount and duration
+            let totalAmount = 0;
+            let totalDuration = 0;
+            
+            selectedServices.forEach(service => {
+                totalAmount += parseFloat(service.price);
+                totalDuration += service.estimated_time_minutes;
+            });
+            
+            // Token amount (20% of total)
+            const tokenAmount = totalAmount * 0.2;
+            
+            try {
+                // Create booking
+                const { data: booking, error } = await supabase
+                    .from("bookings")
+                    .insert([
+                        {
+                            salon_id: currentSalonId,
+                            barber_id: selectedBarber.id,
+                            customer_id: currentUser.id,
+                            booking_date: selectedDate,
+                            booking_time: selectedTime,
+                            total_amount: totalAmount,
+                            token_amount: tokenAmount,
+                            token_utr: customerUTR,
+                            total_duration_minutes: totalDuration,
+                            status: 'pending',
+                            customer_name: currentUser.full_name,
+                            customer_phone: currentUser.phone,
+                            customer_email: currentUser.email || null,
+                            special_instructions: specialInstructions || null
+                        }
+                    ])
+                    .select();
+                
+                if (error) {
+                    console.error('Booking creation error:', error);
+                    throw new Error('Error creating booking: ' + error.message);
                 }
-            ])
-            .select();
-        
-        if (error) {
-            console.error('Booking creation error:', error);
-            throw new Error('Error creating booking: ' + error.message);
-        }
-        
-        // Create booking services
-        if (booking && booking.length > 0) {
-            const bookingId = booking[0].id;
-            
-            const bookingServices = selectedServices.map(service => ({
-                booking_id: bookingId,
-                service_id: service.id,
-                quantity: 1,
-                price: service.price
-            }));
-            
-            const { error: servicesError } = await supabase
-                .from("booking_services")
-                .insert(bookingServices);
-            
-            if (servicesError) {
-                console.error('Booking services error:', servicesError);
-                throw new Error('Error adding services to booking: ' + servicesError.message);
+                
+                // Create booking services
+                if (booking && booking.length > 0) {
+                    const bookingId = booking[0].id;
+                    
+                    const bookingServices = selectedServices.map(service => ({
+                        booking_id: bookingId,
+                        service_id: service.id,
+                        quantity: 1,
+                        price: service.price
+                    }));
+                    
+                    const { error: servicesError } = await supabase
+                        .from("booking_services")
+                        .insert(bookingServices);
+                    
+                    if (servicesError) {
+                        console.error('Booking services error:', servicesError);
+                        throw new Error('Error adding services to booking: ' + servicesError.message);
+                    }
+                }
+                
+                showToast('Booking created successfully!', 'success');
+                closeBookingPanel();
+                resetBookingForm();
+                
+            } catch (error) {
+                showToast(error.message, 'error');
+                console.error('Booking error:', error);
             }
         }
-        
-        showToast('Booking created successfully!', 'success');
-        closeBookingPanel();
-        resetBookingForm();
-        
-    } catch (error) {
-        showToast(error.message, 'error');
-        console.error('Booking error:', error);
-    }
-}
 
         function checkIfOpen(salon) {
             const now = new Date();
