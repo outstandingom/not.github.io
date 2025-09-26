@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCut | My Bookings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #000;
+            --secondary: #777;
+            --light: #f9f9f9;
+            --border: #e0e0e0;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #fff;
+            color: var(--primary);
+            padding-bottom: 70px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .logo span {
+            color: var(--secondary);
+        }
+        
+        .booking-header {
+            background-color: var(--light);
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .booking-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .status-confirmed {
+            background-color: rgba(0, 200, 0, 0.1);
+            color: #00a000;
+        }
+        
+        .status-pending {
+            background-color: rgba(255, 165, 0, 0.1);
+            color: #ffa500;
+        }
+        
+        .status-cancelled {
+            background-color: rgba(255, 0, 0, 0.1);
+            color: #ff0000;
+        }
+        
+        .status-completed {
+            background-color: rgba(0, 100, 255, 0.1);
+            color: #0064ff;
+        }
+        
+        .booking-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .booking-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .booking-card-header {
+            background-color: var(--light);
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .booking-card-body {
+            padding: 20px;
+        }
+        
+        .booking-detail {
+            margin-bottom: 15px;
+        }
+        
+        .booking-detail-label {
+            font-weight: 600;
+            color: var(--secondary);
+            margin-bottom: 5px;
+        }
+        
+        .booking-detail-value {
+            font-size: 16px;
+        }
+        
+        .booking-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        
+        .btn-outline-dark {
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-dark:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-dark {
+            background-color: var(--primary);
+            border: none;
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-weight: 600;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: var(--border);
+            margin: 20px 0;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+        }
+        
+        .empty-state i {
+            font-size: 50px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+        
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            padding: 12px 0;
+            text-align: center;
+            color: var(--secondary);
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active {
+            color: var(--primary);
+        }
+        
+        .nav-item i {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+        }
+        
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .tab-item {
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab-item.active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .status-selector {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .status-option {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        
+        .status-option.selected {
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .user-type-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: var(--primary);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 24px;
+            }
+            
+            .booking-detail-value {
+                font-size: 14px;
+            }
+            
+            .status-selector {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="sticky-top bg-white shadow-sm">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="logo">Pro<span>Cut</span></div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-bell me-3" style="font-size: 20px;"></i>
+                    <div class="rounded-circle bg-light" style="width: 40px; height: 40px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Booking Page Header -->
+        <div class="booking-header">
+            <div class="container">
+                <h2 class="mb-3">My Bookings</h2>
+                <div class="tab-nav">
+                    <div class="tab-item active" data-tab="upcoming">Upcoming</div>
+                    <div class="tab-item" data-tab="completed">Completed</div>
+                    <div class="tab-item" data-tab="cancelled">Cancelled</div>
+                    <div class="tab-item" data-tab="all">All</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container py-4">
+        <!-- User Type Indicator -->
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            <div>
+                You are viewing as: <strong id="userTypeIndicator">Customer</strong>
+                <button class="btn btn-sm btn-outline-primary ms-2" id="toggleUserType">Switch to Salon Owner View</button>
+            </div>
+        </div>
+        
+        <!-- Bookings Container -->
+        <div id="bookingsContainer">
+            <div class="loading-spinner">
+                <div class="spinner-border text-secondary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading bookings...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container for Notifications -->
+    <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav d-md-none">
+        <div class="container d-flex justify-content-around">
+            <a href="index.html" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span class="nav-text">Home</span>
+            </a>
+            <a href="#" class="nav-item active">
+                <i class="fas fa-calendar"></i>
+                <span class="nav-text">Bookings</span>
+            </a>
+            <a href="profile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span class="nav-text">Profile</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmationModalBody">
+                    Are you sure you want to proceed?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Global variables
+        let currentUserType = 'customer'; // 'customer' or 'owner'
+        let currentBookings = [];
+        let currentActiveTab = 'upcoming';
+        let currentBookingToUpdate = null;
+
+        // Load bookings on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up tab switching
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentActiveTab = this.getAttribute('data-tab');
+                    displayBookings();
+                });
+            });
+            
+            // Set up user type toggle
+            document.getElementById('toggleUserType').addEventListener('click', function() {
+                currentUserType = currentUserType === 'customer' ? 'owner' : 'customer';
+                updateUserTypeIndicator();
+                loadBookings();
+            });
+            
+            // Set up confirmation modal
+            document.getElementById('confirmActionBtn').addEventListener('click', function() {
+                if (currentBookingToUpdate) {
+                    updateBookingStatus(currentBookingToUpdate.id, currentBookingToUpdate.newStatus);
+                }
+            });
+            
+            // Initial load
+            loadBookings();
+        });
+
+        // Update user type indicator
+        function updateUserTypeIndicator() {
+            const indicator = document.getElementById('userTypeIndicator');
+            const toggleBtn = document.getElementById('toggleUserType');
+            
+            if (currentUserType === 'customer') {
+                indicator.textContent = 'Customer';
+                toggleBtn.textContent = 'Switch to Salon Owner View';
+            } else {
+                indicator.textContent = 'Salon Owner';
+                toggleBtn.textContent = 'Switch to Customer View';
+            }
+        }
+
+        // Load bookings from Supabase
+        async function loadBookings() {
+            const container = document.getElementById('bookingsContainer');
+            container.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading bookings...</p>
+                </div>
+            `;
+            
+            try {
+                let query = supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        salons(name, address, city, image_url),
+                        barbers(name, specialization, experience_years),
+                        booking_services(
+                            service_id,
+                            salon_services(service_name, price)
+                        )
+                    `);
+                
+                // If user is a salon owner, we might want to filter by their salon
+                // For now, we'll just get all bookings
+                // In a real app, you would filter by the owner's salon ID
+                
+                const { data, error } = await query.order('booking_date', { ascending: false });
+                
+                if (error) {
+                    throw new Error('Error fetching bookings: ' + error.message);
+                }
+                
+                currentBookings = data || [];
+                displayBookings();
+                
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading bookings: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Display bookings based on current tab and user type
+        function displayBookings() {
+            const container = document.getElementById('bookingsContainer');
+            
+            if (currentBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-calendar-check"></i>
+                        <h4>No Bookings Found</h4>
+                        <p class="text-muted">You don't have any bookings yet.</p>
+                        ${currentUserType === 'customer' ? 
+                            '<button class="btn btn-dark px-4" onclick="window.location.href=\'index.html\'">Book Now</button>' : 
+                            ''}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Filter bookings based on active tab
+            let filteredBookings = currentBookings;
+            
+            if (currentActiveTab === 'upcoming') {
+                const today = new Date().toISOString().split('T')[0];
+                filteredBookings = currentBookings.filter(booking => 
+                    booking.status === 'pending' || 
+                    booking.status === 'confirmed' ||
+                    (booking.status !== 'cancelled' && booking.booking_date >= today)
+                );
+            } else if (currentActiveTab === 'completed') {
+                filteredBookings = currentBookings.filter(booking => 
+                    booking.status === 'completed'
+                );
+            } else if (currentActiveTab === 'cancelled') {
+                filteredBookings = currentBookings.filter(booking => 
+                    booking.status === 'cancelled'
+                );
+            }
+            // 'all' tab shows all bookings
+            
+            if (filteredBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-calendar-check"></i>
+                        <h4>No ${currentActiveTab} bookings</h4>
+                        <p class="text-muted">You don't have any ${currentActiveTab} bookings.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Generate HTML for bookings
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5>${filteredBookings.length} Booking(s)</h5>
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">View as:</span>
+                        <span class="badge bg-dark">${currentUserType === 'customer' ? 'Customer' : 'Salon Owner'}</span>
+                    </div>
+                </div>
+                <div id="bookingsList"></div>
+            `;
+            
+            const bookingsList = document.getElementById('bookingsList');
+            
+            filteredBookings.forEach(booking => {
+                const bookingCard = document.createElement('div');
+                bookingCard.className = 'booking-card';
+                bookingCard.innerHTML = generateBookingCardHTML(booking);
+                bookingsList.appendChild(bookingCard);
+            });
+        }
+
+        // Generate HTML for a booking card
+        function generateBookingCardHTML(booking) {
+            // Calculate total amount from services
+            let totalAmount = 0;
+            let servicesList = '';
+            
+            if (booking.booking_services && booking.booking_services.length > 0) {
+                booking.booking_services.forEach(service => {
+                    const servicePrice = service.salon_services?.price || 0;
+                    totalAmount += servicePrice;
+                    servicesList += `
+                        <div class="d-flex justify-content-between">
+                            <span>${service.salon_services?.service_name || 'Service'}</span>
+                            <span>₹${servicePrice}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                servicesList = '<div class="text-muted">No services listed</div>';
+                totalAmount = booking.total_amount || 0;
+            }
+            
+            // Format date and time
+            const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+            
+            const bookingTime = formatTime(booking.booking_time);
+            
+            // Determine status class
+            let statusClass = 'status-pending';
+            if (booking.status === 'confirmed') statusClass = 'status-confirmed';
+            if (booking.status === 'cancelled') statusClass = 'status-cancelled';
+            if (booking.status === 'completed') statusClass = 'status-completed';
+            
+            // Generate action buttons based on user type and status
+            let actionButtons = '';
+            
+            if (currentUserType === 'customer') {
+                // Customer view actions
+                if (booking.status === 'pending' || booking.status === 'confirmed') {
+                    actionButtons = `
+                        <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                        <button class="btn btn-outline-dark" onclick="cancelBooking('${booking.id}')">Cancel Booking</button>
+                    `;
+                } else if (booking.status === 'completed') {
+                    actionButtons = `
+                        <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                        <button class="btn btn-outline-dark" onclick="bookAgain('${booking.id}')">Book Again</button>
+                    `;
+                } else {
+                    actionButtons = `
+                        <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                    `;
+                }
+            } else {
+                // Salon owner view actions
+                actionButtons = `
+                    <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                    <div class="status-selector mt-2">
+                        <span class="status-option ${booking.status === 'pending' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'pending')">Pending</span>
+                        <span class="status-option ${booking.status === 'confirmed' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'confirmed')">Confirm</span>
+                        <span class="status-option ${booking.status === 'completed' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'completed')">Complete</span>
+                        <span class="status-option ${booking.status === 'cancelled' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'cancelled')">Cancel</span>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="booking-card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="booking-status ${statusClass}">${booking.status.toUpperCase()}</span>
+                        <span class="text-muted ms-2">Booking ID: #PC${String(booking.id).padStart(5, '0')}</span>
+                    </div>
+                    <div class="text-muted">Booked on: ${bookingDate}</div>
+                </div>
+                <div class="booking-card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <img src="${booking.salons?.image_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
+                                 alt="Salon" class="booking-image">
+                        </div>
+                        <div class="col-md-5">
+                            <h5>${booking.booking_services && booking.booking_services.length > 0 ? 
+                                booking.booking_services[0].salon_services?.service_name : 'Haircut Service'}</h5>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Salon</div>
+                                <div class="booking-detail-value">${booking.salons?.name || 'Unknown Salon'}, ${booking.salons?.address || ''}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Date & Time</div>
+                                <div class="booking-detail-value">${bookingDate}, ${bookingTime}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Professional</div>
+                                <div class="booking-detail-value">${booking.barbers?.name || 'Unknown Barber'} ${booking.barbers?.specialization ? `(${booking.barbers.specialization})` : ''}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Services</div>
+                                <div class="booking-detail-value">
+                                    ${servicesList}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex flex-column justify-content-between">
+                            <div class="text-end mb-3">
+                                <div class="booking-detail-label">Total Amount</div>
+                                <div class="h4">₹${totalAmount}</div>
+                            </div>
+                            <div class="d-flex flex-column gap-2">
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show confirmation modal for status change
+        function showStatusConfirmation(bookingId, newStatus) {
+            currentBookingToUpdate = {
+                id: bookingId,
+                newStatus: newStatus
+            };
+            
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            const modalBody = document.getElementById('confirmationModalBody');
+            
+            modalBody.textContent = `Are you sure you want to change the status of booking #PC${String(bookingId).padStart(5, '0')} to ${newStatus.toUpperCase()}?`;
+            
+            modal.show();
+        }
+
+        // Update booking status
+        async function updateBookingStatus(bookingId, newStatus) {
+            try {
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ status: newStatus })
+                    .eq('id', bookingId);
+                
+                if (error) {
+                    throw new Error('Error updating booking: ' + error.message);
+                }
+                
+                showToast(`Booking status updated to ${newStatus}`, 'success');
+                
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+                modal.hide();
+                
+                // Reload bookings
+                loadBookings();
+                
+            } catch (error) {
+                console.error('Error updating booking status:', error);
+                showToast('Error updating booking status: ' + error.message, 'error');
+            }
+        }
+
+        // Cancel booking (customer action)
+        function cancelBooking(bookingId) {
+            showStatusConfirmation(bookingId, 'cancelled');
+        }
+
+        // Book again (customer action)
+        function bookAgain(bookingId) {
+            // Find the booking
+            const booking = currentBookings.find(b => b.id === bookingId);
+            if (booking) {
+                // In a real app, you would redirect to booking page with pre-filled data
+                showToast('Redirecting to booking page...', 'success');
+                // window.location.href = `index.html?salonId=${booking.salon_id}`;
+            }
+        }
+
+        // View booking details
+        function viewBookingDetails(bookingId) {
+            // Find the booking
+            const booking = currentBookings.find(b => b.id === bookingId);
+            if (booking) {
+                // In a real app, you would show a detailed modal or redirect to a details page
+                alert(`Booking Details for #PC${String(bookingId).padStart(5, '0')}\n\nStatus: ${booking.status}\nDate: ${booking.booking_date}\nTime: ${booking.booking_time}\nCustomer: ${booking.customer_name}\nPhone: ${booking.customer_phone}`);
+            }
+        }
+
+        // Format time helper function
+        function formatTime(timeStr) {
+            if (!timeStr) return 'Unknown';
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const formattedHours = hours % 12 || 12;
+            return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center ${type === 'error' ? 'bg-danger' : 'bg-success'} text-white`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas ${type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
+    </script>
+</body>
+</html>
