@@ -375,10 +375,6 @@
                     <div class="profile-detail-value" id="salonCity">Loading...</div>
                 </div>
 
-                <div class="profile-detail">
-                    <div class="profile-detail-label">UPI id</div>
-                    <div class="profile-detail-value" id="upi_id">Loading...</div>
-                </div>
                 
                 <div class="profile-detail">
                     <div class="profile-detail-label">Rating</div>
@@ -526,7 +522,7 @@
         const profileJoinDate = document.getElementById('profileJoinDate');
         const profileAccountType = document.getElementById('profileAccountType');
         const profileImage = document.getElementById('profileImage');
-          const profileImage = document.getElementById('upi_id');
+         
         const merchantBadge = document.getElementById('merchantBadge');
         const logoutBtn = document.getElementById('logoutBtn');
         const changePasswordBtn = document.getElementById('changePasswordBtn');
@@ -732,7 +728,7 @@
                 salonName.textContent = salonData.name || 'Not provided';
                 salonDescription.textContent = salonData.description || 'No description provided';
                 salonAddress.textContent = salonData.address || 'Not provided';
-                   salonAddress.textContent = salonData.upi_id || 'Not provided';
+                   
                 salonCity.textContent = salonData.city || 'Not provided';
                 salonRating.textContent = salonData.rating ? `${salonData.rating} ⭐` : 'Not rated yet';
                 
