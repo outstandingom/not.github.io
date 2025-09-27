@@ -33,6 +33,7 @@
         const salonDescription = document.getElementById('salonDescription');
         const salonAddress = document.getElementById('salonAddress');
         const salonCity = document.getElementById('salonCity');
+        const upi_id= document.getElementById('upi_id');
         const salonRating = document.getElementById('salonRating');
         const salonHours = document.getElementById('salonHours');
         const salonContact = document.getElementById('salonContact');
