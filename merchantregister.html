@@ -429,6 +429,11 @@
                         <input type="tel" class="form-control" id="contactPhone" placeholder="Phone" required pattern="[0-9]{10}">
                         <div class="invalid-feedback">Please provide a valid 10-digit phone number.</div>
                     </div>
+                      <div class="col-md-6">
+                        <label for="contactPhone" class="form-label">UPI ID *</label>
+                        <input type="tel" class="form-control" id="upi_id" placeholder="Enter UPI id" required pattern="[0-9]{10}">
+                        <div class="invalid-feedback">Please enter UPI Id to recived payment </div>
+                    </div>
                 </div>
                 
                 <label for="contactEmail" class="form-label">Email *</label>
@@ -805,6 +810,7 @@
                 description: document.getElementById('salonDescription').value.trim(),
                 address: document.getElementById('salonAddress').value.trim(),
                 city: document.getElementById('salonCity').value.trim(),
+                upi_id:document.getElementById('upi_id').value.trim(),
                 map_link: document.getElementById('mapLink').value.trim() || null,
                 image_url: document.getElementById('salonImageUrl').value.trim() || null,
                 contact_name: document.getElementById('contactName').value.trim(),
