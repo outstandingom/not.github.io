@@ -1,290 +1,636 @@
-     // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
-            authDomain: "login-fa2eb.firebaseapp.com",
-            projectId: "login-fa2eb",
-            storageBucket: "login-fa2eb.appspot.com",
-            messagingSenderId: "1093052500996",
-            appId: "1:1093052500996:web:05a13485172c455e93b951",
-            measurementId: "G-9TC2J0YQ3R"
-        };
+ // Supabase configuration
+        const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // Global variables
+        let currentUserType = 'customer'; // 'customer' or 'owner'
+        let currentBookings = [];
+        let currentActiveTab = 'upcoming';
+        let currentBookingToUpdate = null;
+        let currentUserData = null;
 
-        // DOM Elements
-        const registerForm = document.getElementById('registerForm');
-        const fullNameInput = document.getElementById('fullName');
-        const phoneInput = document.getElementById('phoneNumber');
-        const emailInput = document.getElementById('registerEmail');
-        const passwordInput = document.getElementById('registerPassword');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const termsCheckbox = document.getElementById('termsAgree');
-        const registerButton = document.getElementById('registerButton');
-        const registerLoader = document.getElementById('registerLoader');
-        const registerText = document.getElementById('registerText');
-        const googleSignInBtn = document.getElementById('googleSignIn');
-        const successMessage = document.getElementById('successMessage');
-        const firebaseError = document.getElementById('firebaseError');
-        const passwordToggle = document.getElementById('registerPasswordToggle');
-        const confirmPasswordToggle = document.getElementById('confirmPasswordToggle');
-        const passwordStrengthBar = document.getElementById('passwordStrengthBar');
-        const passwordStrengthText = document.getElementById('passwordStrengthText');
-
-        // Password strength levels
-        const strengthLevels = {
-            0: {text: "Very Weak", color: "#d32f2f", width: "25%"},
-            1: {text: "Weak", color: "#ff9800", width: "50%"},
-            2: {text: "Medium", color: "#ffc107", width: "75%"},
-            3: {text: "Strong", color: "#4caf50", width: "100%"}
-        };
-
-        // Toggle password visibility
-        passwordToggle.addEventListener('click', function() {
-            togglePasswordVisibility(passwordInput, this);
-        });
-
-        confirmPasswordToggle.addEventListener('click', function() {
-            togglePasswordVisibility(confirmPasswordInput, this);
-        });
-
-        function togglePasswordVisibility(inputElement, toggleElement) {
-            const type = inputElement.getAttribute('type') ==='password' ? 'text' : 'password';
-            inputElement.setAttribute('type', type);
-            const icon = toggleElement.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
+        // Check if user is logged in and get user data
+        async function checkUserLogin() {
+            try {
+                // Get current user session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    // Redirect to login if no session
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                console.log('User session:', session.user.id);
+                
+                // Get user data from users table using auth_uid
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('auth_uid', session.user.id)
+                    .single();
+                
+                if (userError) {
+                    console.error('Error fetching user data:', userError);
+                    throw userError;
+                }
+                
+                currentUserData = userData;
+                console.log('Current user data:', currentUserData);
+                
+                // Set user type based on account_type
+                if (userData.account_type === 'salon_owner') {
+                    currentUserType = 'owner';
+                } else {
+                    currentUserType = 'customer';
+                }
+                
+                updateUserTypeIndicator();
+                
+                return {
+                    session: session,
+                    user: session.user,
+                    userData: userData
+                };
+                
+            } catch (error) {
+                console.error('Error checking user login:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
         }
 
-        // Password strength calculation
-        passwordInput.addEventListener('input', function() {
-            const password = this.value;
-            let strength = 0;
+        // Load bookings on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check if user is logged in
+            const userInfo = await checkUserLogin();
+            if (!userInfo) return;
             
-            // Check password length
-            if (password.length >= 8) strength++;
+            // Set up tab switching
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentActiveTab = this.getAttribute('data-tab');
+                    displayBookings();
+                });
+            });
             
-            // Check for uppercase letters
-            if (/[A-Z]/.test(password)) strength++;
+            // Set up user type toggle
+            document.getElementById('toggleUserType').addEventListener('click', function() {
+                currentUserType = currentUserType === 'customer' ? 'owner' : 'customer';
+                updateUserTypeIndicator();
+                loadBookings();
+            });
             
-            // Check for numbers
-            if (/\d/.test(password)) strength++;
+            // Set up confirmation modal
+            document.getElementById('confirmActionBtn').addEventListener('click', function() {
+                if (currentBookingToUpdate) {
+                    updateBookingStatus(currentBookingToUpdate.id, currentBookingToUpdate.newStatus);
+                }
+            });
             
-            // Check for special characters
-            if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
-            
-            // Limit strength to 3
-            strength = Math.min(strength, 3);
-            
-            // Update strength indicator
-            const level = strengthLevels[strength];
-            passwordStrengthBar.style.width = level.width;
-            passwordStrengthBar.style.backgroundColor = level.color;
-            passwordStrengthText.textContent = level.text;
-            passwordStrengthText.className = "password-strength-text";
-            
-            if (strength === 0) {
-                passwordStrengthText.classList.add("strength-weak");
-            } else if (strength === 1) {
-                passwordStrengthText.classList.add("strength-medium");
-            } else {
-                passwordStrengthText.classList.add("strength-strong");
-            }
+            // Initial load
+            loadBookings();
         });
 
-        // Form validation
-        function validateForm() {
-            let isValid = true;
-            hideAllErrors();
+        // Update user type indicator
+        function updateUserTypeIndicator() {
+            const indicator = document.getElementById('userTypeIndicator');
+            const toggleBtn = document.getElementById('toggleUserType');
             
-            // Full name validation
-            if (!fullNameInput.value.trim()) {
-                showError('nameError', 'Full name is required');
-                fullNameInput.classList.add('error');
-                isValid = false;
+            if (currentUserType === 'customer') {
+                indicator.textContent = 'Customer';
+                toggleBtn.textContent = 'Switch to Salon Owner View';
             } else {
-                fullNameInput.classList.remove('error');
+                indicator.textContent = 'Salon Owner';
+                toggleBtn.textContent = 'Switch to Customer View';
             }
-            
-            // Phone number validation
-            const phoneRegex = /^[0-9]{10,15}$/;
-            if (!phoneRegex.test(phoneInput.value.replace(/\D/g, ''))) {
-                showError('phoneError', 'Please enter a valid phone number (10-15 digits)');
-                phoneInput.classList.add('error');
-                isValid = false;
-            } else {
-                phoneInput.classList.remove('error');
-            }
-            
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(emailInput.value)) {
-                showError('emailError', 'Please enter a valid email address');
-                emailInput.classList.add('error');
-                isValid = false;
-            } else {
-                emailInput.classList.remove('error');
-            }
-            
-            // Password validation
-            if (passwordInput.value.length < 8) {
-                showError('passwordError', 'Password must be at least 8 characters');
-                passwordInput.classList.add('error');
-                isValid = false;
-            } else {
-                passwordInput.classList.remove('error');
-            }
-            
-            // Confirm password validation
-            if (passwordInput.value !== confirmPasswordInput.value) {
-                showError('confirmPasswordError', 'Passwords do not match');
-                confirmPasswordInput.classList.add('error');
-                isValid = false;
-            } else {
-                confirmPasswordInput.classList.remove('error');
-            }
-            
-            // Terms agreement validation
-            if (!termsCheckbox.checked) {
-                showError('termsError', 'You must agree to the terms');
-                isValid = false;
-            }
-            
-            return isValid;
         }
 
-        function showError(elementId, message) {
-            const errorElement = document.getElementById(elementId);
-            errorElement.textContent = message;
-            errorElement.style.display = 'block';
+        // Load bookings from Supabase
+        async function loadBookings() {
+            const container = document.getElementById('bookingsContainer');
+            container.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-secondary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading bookings...</p>
+                </div>
+            `;
+            
+            try {
+                console.log('Loading bookings for user type:', currentUserType);
+                console.log('Current user ID:', currentUserData?.id);
+                
+                let query = supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        salons(name, address, city, image_url, contact_phone),
+                        barbers(name, specialization, experience_years, image_url),
+                        booking_services(
+                            service_id,
+                            salon_services(service_name, price)
+                        )
+                    `);
+                
+                // Fixed: Proper user-booking relationship filtering
+                if (currentUserType === 'customer') {
+                    // For customers, show only their bookings using customer_id
+                    console.log('Filtering by customer_id:', currentUserData.id);
+                    query = query.eq('customer_id', currentUserData.id);
+                } else {
+                    // For salon owners, show bookings for their salons
+                    console.log('Loading salon owner bookings');
+                    // First, get the owner's salons using user_id
+                    const { data: ownerSalons, error: salonError } = await supabase
+                        .from('salons')
+                        .select('id')
+                        .eq('user_id', currentUserData.id);
+                    
+                    if (salonError) {
+                        console.error('Error fetching owner salons:', salonError);
+                        throw salonError;
+                    }
+                    
+                    console.log('Owner salons:', ownerSalons);
+                    
+                    if (ownerSalons && ownerSalons.length > 0) {
+                        const salonIds = ownerSalons.map(salon => salon.id);
+                        console.log('Filtering by salon IDs:', salonIds);
+                        query = query.in('salon_id', salonIds);
+                    } else {
+                        // Owner has no salons, so no bookings to show
+                        console.log('No salons found for this owner');
+                        currentBookings = [];
+                        displayBookings();
+                        return;
+                    }
+                }
+                
+                const { data, error } = await query.order('booking_date', { ascending: false });
+                
+                if (error) {
+                    console.error('Supabase query error:', error);
+                    throw new Error('Error fetching bookings: ' + error.message);
+                }
+                
+                console.log('Bookings loaded:', data);
+                currentBookings = data || [];
+                displayBookings();
+                
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading bookings: ${error.message}
+                        <br><small>Check console for details</small>
+                    </div>
+                `;
+            }
         }
 
-        function hideAllErrors() {
-            const errors = document.querySelectorAll('.error-message');
-            errors.forEach(error => {
-                error.style.display = 'none';
+        // Display bookings based on current tab and user type
+        function displayBookings() {
+            const container = document.getElementById('bookingsContainer');
+            
+            if (currentBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-calendar-check"></i>
+                        <h4>No Bookings Found</h4>
+                        <p class="text-muted">You don't have any ${currentActiveTab} bookings yet.</p>
+                        ${currentUserType === 'customer' ? 
+                            '<button class="btn btn-dark px-4" onclick="window.location.href=\'index.html\'">Book Now</button>' : 
+                            '<p class="text-muted">When customers book your salon services, they will appear here.</p>'}
+                    </div>
+                `;
+                return;
+            }
+            
+            // Filter bookings based on active tab
+            let filteredBookings = currentBookings;
+            
+            if (currentActiveTab === 'upcoming') {
+                const today = new Date().toISOString().split('T')[0];
+                filteredBookings = currentBookings.filter(booking => 
+                    (booking.status === 'pending' || 
+                     booking.status === 'confirmed') &&
+                    booking.booking_date >= today
+                );
+            } else if (currentActiveTab === 'completed') {
+                filteredBookings = currentBookings.filter(booking => 
+                    booking.status === 'completed'
+                );
+            } else if (currentActiveTab === 'cancelled') {
+                filteredBookings = currentBookings.filter(booking => 
+                    booking.status === 'cancelled'
+                );
+            }
+            // 'all' tab shows all bookings
+            
+            if (filteredBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-calendar-check"></i>
+                        <h4>No ${currentActiveTab} bookings</h4>
+                        <p class="text-muted">You don't have any ${currentActiveTab} bookings.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Generate HTML for bookings
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5>${filteredBookings.length} Booking(s)</h5>
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">View as:</span>
+                        <span class="badge bg-dark">${currentUserType === 'customer' ? 'Customer' : 'Salon Owner'}</span>
+                    </div>
+                </div>
+                <div id="bookingsList"></div>
+            `;
+            
+            const bookingsList = document.getElementById('bookingsList');
+            
+            filteredBookings.forEach(booking => {
+                const bookingCard = document.createElement('div');
+                bookingCard.className = 'booking-card';
+                bookingCard.innerHTML = generateBookingCardHTML(booking);
+                bookingsList.appendChild(bookingCard);
             });
         }
 
-        // Firebase registration
-        registerForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Generate HTML for a booking card
+        function generateBookingCardHTML(booking) {
+            // Calculate total amount from services
+            let totalAmount = 0;
+            let servicesList = '';
             
-            if (!validateForm()) return;
-            
-            // Show loading state
-            registerLoader.style.display = 'inline-block';
-            registerText.textContent = 'Creating Account...';
-            registerButton.disabled = true;
-            
-            const fullName = fullNameInput.value.trim();
-            const phone = phoneInput.value.replace(/\D/g, ''); // Remove non-digits for storage
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            
-            try {
-                // Create user with Firebase Authentication
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-                
-                // Save additional user data to Firestore
-                await db.collection('users').doc(user.uid).set({
-                    fullName: fullName,
-                    phone: phone,
-                    email: email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    role: 'customer'
+            if (booking.booking_services && booking.booking_services.length > 0) {
+                booking.booking_services.forEach(service => {
+                    const servicePrice = service.salon_services?.price || 0;
+                    totalAmount += servicePrice;
+                    servicesList += `
+                        <div class="d-flex justify-content-between">
+                            <span>${service.salon_services?.service_name || 'Service'}</span>
+                            <span>₹${servicePrice}</span>
+                        </div>
+                    `;
                 });
-                
-                // Show success message
-                successMessage.textContent = 'Account created successfully! Redirecting to your profile...';
-                successMessage.style.display = 'block';
-                firebaseError.style.display = 'none';
-                
-                // Redirect to profile page after 2 seconds
-                setTimeout(() => {
-                    window.location.href = 'profile.html';
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Registration error:', error);
-                firebaseError.textContent = getFirebaseErrorMessage(error.code);
-                firebaseError.style.display = 'block';
-                successMessage.style.display = 'none';
-            } finally {
-                // Reset loading state
-                registerLoader.style.display = 'none';
-                registerText.textContent = 'Create Account';
-                registerButton.disabled = false;
+            } else {
+                servicesList = '<div class="text-muted">No services listed</div>';
+                totalAmount = booking.total_amount || 0;
             }
-        });
-
-        // Google sign-in
-        googleSignInBtn.addEventListener('click', async function() {
-            const provider = new firebase.auth.GoogleAuthProvider();
             
+            // Format date and time
+            const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+            
+            const bookingTime = formatTime(booking.booking_time);
+            
+            // Determine status class
+            let statusClass = 'status-pending';
+            if (booking.status === 'confirmed') statusClass = 'status-confirmed';
+            if (booking.status === 'cancelled') statusClass = 'status-cancelled';
+            if (booking.status === 'completed') statusClass = 'status-completed';
+            
+            // Generate action buttons based on user type and status
+            let actionButtons = '';
+            
+            if (currentUserType === 'customer') {
+                // Customer view actions
+                if (booking.status === 'pending' || booking.status === 'confirmed') {
+                    actionButtons = `
+                        <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                        <button class="btn btn-outline-dark" onclick="cancelBooking('${booking.id}')">Cancel Booking</button>
+                    `;
+                } else if (booking.status === 'completed') {
+                    actionButtons = `
+                        <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                        <button class="btn btn-outline-dark" onclick="bookAgain('${booking.id}')">Book Again</button>
+                    `;
+                } else {
+                    actionButtons = `
+                        <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                    `;
+                }
+            } else {
+                // Salon owner view actions
+                actionButtons = `
+                    <button class="btn btn-dark" onclick="viewBookingDetails('${booking.id}')">View Details</button>
+                    <div class="status-selector mt-2">
+                        <span class="status-option ${booking.status === 'pending' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'pending')">Pending</span>
+                        <span class="status-option ${booking.status === 'confirmed' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'confirmed')">Confirm</span>
+                        <span class="status-option ${booking.status === 'completed' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'completed')">Complete</span>
+                        <span class="status-option ${booking.status === 'cancelled' ? 'selected' : ''}" 
+                              onclick="showStatusConfirmation('${booking.id}', 'cancelled')">Cancel</span>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="booking-card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="booking-status ${statusClass}">${booking.status.toUpperCase()}</span>
+                        <span class="text-muted ms-2">Booking ID: #PC${String(booking.id).substring(0, 8)}</span>
+                    </div>
+                    <div class="text-muted">Booked on: ${new Date(booking.created_at).toLocaleDateString('en-IN')}</div>
+                </div>
+                <div class="booking-card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <img src="${booking.salons?.image_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'}" 
+                                 alt="Salon" class="booking-image">
+                        </div>
+                        <div class="col-md-5">
+                            <h5>${booking.booking_services && booking.booking_services.length > 0 ? 
+                                booking.booking_services[0].salon_services?.service_name : 'Haircut Service'}</h5>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Salon</div>
+                                <div class="booking-detail-value">${booking.salons?.name || 'Unknown Salon'}, ${booking.salons?.city || ''}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Date & Time</div>
+                                <div class="booking-detail-value">${bookingDate}, ${bookingTime}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Professional</div>
+                                <div class="booking-detail-value">${booking.barbers?.name || 'Unknown Barber'} ${booking.barbers?.specialization ? `(${booking.barbers.specialization})` : ''}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Services</div>
+                                <div class="booking-detail-value">
+                                    ${servicesList}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 d-flex flex-column justify-content-between">
+                            <div class="text-end mb-3">
+                                <div class="booking-detail-label">Total Amount</div>
+                                <div class="h4">₹${totalAmount}</div>
+                            </div>
+                            <div class="d-flex flex-column gap-2">
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show confirmation modal for status change
+        function showStatusConfirmation(bookingId, newStatus) {
+            currentBookingToUpdate = {
+                id: bookingId,
+                newStatus: newStatus
+            };
+            
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            const modalBody = document.getElementById('confirmationModalBody');
+            
+            modalBody.textContent = `Are you sure you want to change the status of booking #PC${String(bookingId).substring(0, 8)} to ${newStatus.toUpperCase()}?`;
+            
+            modal.show();
+        }
+
+        // Update booking status
+        async function updateBookingStatus(bookingId, newStatus) {
             try {
-                const result = await auth.signInWithPopup(provider);
-                const user = result.user;
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ 
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', bookingId);
                 
-                // Check if user already exists in Firestore
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                
-                if (!userDoc.exists) {
-                    // Save new user to Firestore
-                    await db.collection('users').doc(user.uid).set({
-                        fullName: user.displayName || 'Google User',
-                        email: user.email,
-                        phone: user.phoneNumber || '',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        role: 'customer'
-                    });
+                if (error) {
+                    throw new Error('Error updating booking: ' + error.message);
                 }
                 
-                // Show success message
-                successMessage.textContent = 'Signed in successfully! Redirecting...';
-                successMessage.style.display = 'block';
-                firebaseError.style.display = 'none';
+                showToast(`Booking status updated to ${newStatus}`, 'success');
                 
-                // Redirect to profile page after 1 second
-                setTimeout(() => {
-                    window.location.href = 'profile.html';
-                }, 1000);
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+                modal.hide();
+                
+                // Reload bookings
+                loadBookings();
                 
             } catch (error) {
-                console.error('Google sign-in error:', error);
-                firebaseError.textContent = getFirebaseErrorMessage(error.code);
-                firebaseError.style.display = 'block';
-                successMessage.style.display = 'none';
+                console.error('Error updating booking status:', error);
+                showToast('Error updating booking status: ' + error.message, 'error');
             }
-        });
+        }
 
-        // Helper function to translate Firebase error codes
-        function getFirebaseErrorMessage(code) {
-            switch(code) {
-                case 'auth/email-already-in-use':
-                    return 'This email is already registered. Please sign in or use a different email.';
-                case 'auth/invalid-email':
-                    return 'The email address is not valid.';
-                case 'auth/weak-password':
-                    return 'Password should be at least 8 characters.';
-                case 'auth/popup-closed-by-user':
-                    return 'Google sign-in was canceled.';
-                case 'auth/network-request-failed':
-                    return 'Network error. Please check your internet connection.';
-                default:
-                    return 'An error occurred. Please try again.';
+        // Cancel booking (customer action)
+        function cancelBooking(bookingId) {
+            showStatusConfirmation(bookingId, 'cancelled');
+        }
+
+        // Book again (customer action)
+        function bookAgain(bookingId) {
+            // Find the booking
+            const booking = currentBookings.find(b => b.id === bookingId);
+            if (booking) {
+                // Redirect to booking page with pre-filled data
+                showToast('Redirecting to booking page...', 'success');
+                // In a real app, you would pass the salon ID and other details
+                window.location.href = `index.html?salonId=${booking.salon_id}`;
             }
-                          }
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        const userName = user.displayName || user.email.split('@')[0];
-        showNotification(`Welcome ${userName}! Redirecting...`, true);
-        
-        setTimeout(() => {
-            window.location.href = 'profile.html';
-        }, 2000);
-    }
-});
+        }
+
+        // View booking details
+        function viewBookingDetails(bookingId) {
+            // Find the booking
+            const booking = currentBookings.find(b => b.id === bookingId);
+            if (booking) {
+                // Generate detailed HTML for the modal
+                const modalBody = document.getElementById('bookingDetailsModalBody');
+                
+                // Calculate total amount
+                let totalAmount = 0;
+                let servicesHTML = '';
+                
+                if (booking.booking_services && booking.booking_services.length > 0) {
+                    booking.booking_services.forEach(service => {
+                        const servicePrice = service.salon_services?.price || 0;
+                        totalAmount += servicePrice;
+                        servicesHTML += `
+                            <div class="service-item">
+                                <span>${service.salon_services?.service_name || 'Service'}</span>
+                                <span>₹${servicePrice}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    servicesHTML = '<div class="text-muted">No services listed</div>';
+                    totalAmount = booking.total_amount || 0;
+                }
+                
+                // Format dates
+                const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                
+                const bookingTime = formatTime(booking.booking_time);
+                const createdDate = new Date(booking.created_at).toLocaleDateString('en-IN');
+                
+                modalBody.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Booking Information</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Booking ID</div>
+                                <div class="booking-detail-value">#PC${String(booking.id).substring(0, 8)}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Status</div>
+                                <div class="booking-detail-value"><span class="booking-status ${getStatusClass(booking.status)}">${booking.status.toUpperCase()}</span></div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Date & Time</div>
+                                <div class="booking-detail-value">${bookingDate} at ${bookingTime}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Booked On</div>
+                                <div class="booking-detail-value">${createdDate}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Salon Information</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Salon Name</div>
+                                <div class="booking-detail-value">${booking.salons?.name || 'Unknown Salon'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Address</div>
+                                <div class="booking-detail-value">${booking.salons?.address || 'Not specified'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Contact</div>
+                                <div class="booking-detail-value">${booking.salons?.contact_phone || 'Not specified'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Professional</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Barber</div>
+                                <div class="booking-detail-value">${booking.barbers?.name || 'Unknown Barber'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Specialization</div>
+                                <div class="booking-detail-value">${booking.barbers?.specialization || 'Not specified'}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Experience</div>
+                                <div class="booking-detail-value">${booking.barbers?.experience_years || '0'} years</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Customer Information</h6>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Name</div>
+                                <div class="booking-detail-value">${booking.customer_name}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Phone</div>
+                                <div class="booking-detail-value">${booking.customer_phone}</div>
+                            </div>
+                            <div class="booking-detail">
+                                <div class="booking-detail-label">Email</div>
+                                <div class="booking-detail-value">${booking.customer_email || 'Not specified'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Services</h6>
+                        ${servicesHTML}
+                        <div class="service-item total-amount">
+                            <span>Total Amount</span>
+                            <span>₹${totalAmount}</span>
+                        </div>
+                    </div>
+                    
+                    ${booking.special_instructions ? `
+                        <div class="mt-3">
+                            <h6>Special Instructions</h6>
+                            <p>${booking.special_instructions}</p>
+                        </div>
+                    ` : ''}
+                `;
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('bookingDetailsModal'));
+                modal.show();
+            }
+        }
+
+        // Helper function to get status class
+        function getStatusClass(status) {
+            if (status === 'confirmed') return 'status-confirmed';
+            if (status === 'cancelled') return 'status-cancelled';
+            if (status === 'completed') return 'status-completed';
+            return 'status-pending';
+        }
+
+        // Format time helper function
+        function formatTime(timeStr) {
+            if (!timeStr) return 'Unknown';
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const formattedHours = hours % 12 || 12;
+            return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center ${type === 'error' ? 'bg-danger' : 'bg-success'} text-white`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas ${type === 'error' ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { autohide: true, delay: 3000 });
+            bsToast.show();
+            
+            // Remove toast from DOM after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
+  
