@@ -1,150 +1,170 @@
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyCsJR-aYy0VGSPvb7pXHaK3EmGsJWcvdDo",
-    authDomain: "login-fa2eb.firebaseapp.com",
-    projectId: "login-fa2eb",
-    storageBucket: "login-fa2eb.appspot.com",
-    messagingSenderId: "1093052500996",
-    appId: "1:1093052500996:web:05a13485172c455e93b951",
-    measurementId: "G-9TC2J0YQ3R"
-};
+   // Supabase configuration
+        const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// DOM Elements
-const loginForm = document.getElementById('loginForm');
-const loginEmail = document.getElementById('loginEmail');
-const loginPassword = document.getElementById('loginPassword');
-const loginPasswordToggle = document.getElementById('loginPasswordToggle');
-const googleSignIn = document.getElementById('googleSignIn');
-const forgotPassword = document.getElementById('forgotPassword');
-const signUpLink = document.getElementById('signUpLink');
-const notification = document.getElementById('notification');
-const notificationText = document.getElementById('notificationText');
+        // DOM Elements
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('loginEmail');
+        const passwordInput = document.getElementById('loginPassword');
+        const loginButton = document.getElementById('loginButton');
+        const loginLoader = document.getElementById('loginLoader');
+        const loginText = document.getElementById('loginText');
+        const googleSignInBtn = document.getElementById('googleSignIn');
+        const successMessage = document.getElementById('successMessage');
+        const supabaseError = document.getElementById('supabaseError');
+        const passwordToggle = document.getElementById('passwordToggle');
+        const rememberMeCheckbox = document.getElementById('rememberMe');
 
-// Toggle password visibility
-loginPasswordToggle.addEventListener('click', function() {
-    const type = loginPassword.getAttribute('type') === 'password' ? 'text' : 'password';
-    loginPassword.setAttribute('type', type);
-    this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
-});
+        // Toggle password visibility
+        passwordToggle.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
 
-// Show notification
-function showNotification(message, isSuccess = true) {
-    notification.className = 'notification';
-    notification.classList.add(isSuccess ? 'success' : 'error');
-    notification.classList.add('show');
-    notificationText.textContent = message;
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
-    }, 3000);
-}
-
-// Handle form submission
-loginForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const email = loginEmail.value;
-    const password = loginPassword.value;
-    
-    auth.signInWithEmailAndPassword(email, password)
-        .catch((error) => {
-            const errorCode = error.code;
-            let errorMessage = 'An error occurred. Please try again.';
+        // Form validation
+        function validateForm() {
+            let isValid = true;
+            hideAllErrors();
             
-            switch(errorCode) {
-                case 'auth/invalid-email':
-                    errorMessage = 'Invalid email address.';
-                    break;
-                case 'auth/user-disabled':
-                    errorMessage = 'This account has been disabled.';
-                    break;
-                case 'auth/user-not-found':
-                    errorMessage = 'No account found with this email.';
-                    break;
-                case 'auth/wrong-password':
-                    errorMessage = 'Incorrect password.';
-                    break;
-                case 'auth/too-many-requests':
-                    errorMessage = 'Too many attempts. Try again later or reset password.';
-                    break;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(emailInput.value)) {
+                showError('emailError', 'Please enter a valid email address');
+                emailInput.classList.add('error');
+                isValid = false;
+            } else {
+                emailInput.classList.remove('error');
             }
             
-            showNotification(errorMessage, false);
-        });
-});
-
-// Google Sign-In - Fixed with enhanced error handling
-googleSignIn.addEventListener('click', function() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    
-    auth.signInWithPopup(provider)
-        .catch((error) => {
-            const errorCode = error.code;
-            let errorMessage = 'Google sign-in failed. Please try again.';
-            
-            // Handle specific Google sign-in errors
-            switch(errorCode) {
-                case 'auth/account-exists-with-different-credential':
-                    errorMessage = 'This email is already registered with another method.';
-                    break;
-                case 'auth/popup-closed-by-user':
-                    errorMessage = 'Sign-in window was closed before completing.';
-                    break;
-                case 'auth/popup-blocked':
-                    errorMessage = 'Popup blocked by browser. Allow popups and try again.';
-                    break;
-                case 'auth/cancelled-popup-request':
-                    errorMessage = 'Multiple sign-in attempts detected.';
-                    break;
-                case 'auth/unauthorized-domain':
-                    errorMessage = 'Unauthorized domain (check Firebase config).';
-                    break;
-                default:
-                    errorMessage = `${error.message} (Code: ${errorCode})`;
+            if (!passwordInput.value) {
+                showError('passwordError', 'Please enter your password');
+                passwordInput.classList.add('error');
+                isValid = false;
+            } else {
+                passwordInput.classList.remove('error');
             }
             
-            console.error('Google Sign-In Error:', error);
-            showNotification(errorMessage, false);
-        });
-});
+            return isValid;
+        }
 
-// Forgot password
-forgotPassword.addEventListener('click', function(e) {
-    e.preventDefault();
-    const email = prompt('Please enter your email address:');
-    
-    if (email) {
-        auth.sendPasswordResetEmail(email)
-            .then(() => {
-                showNotification('Password reset email sent. Check your inbox.', true);
-            })
-            .catch((error) => {
-                showNotification('Error sending reset email. Please try again.', false);
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        function hideAllErrors() {
+            const errors = document.querySelectorAll('.error-message');
+            errors.forEach(error => {
+                error.style.display = 'none';
             });
-    }
-});
+        }
 
-// Sign up link
-signUpLink.addEventListener('click', function(e) {
-    e.preventDefault();
-    showNotification('Redirecting to sign up page...', true);
-    setTimeout(() => {
-        window.location.href = 'register.html';
-    }, 1500);
-});
+        // Supabase login
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) return;
+            
+            // Show loading state
+            loginLoader.style.display = 'inline-block';
+            loginText.textContent = 'Signing In...';
+            loginButton.disabled = true;
+            
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            try {
+                // Sign in user with Supabase Auth
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
 
-// Auth state handler (manages redirects and notifications)
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        const userName = user.displayName || user.email.split('@')[0];
-        showNotification(`Welcome ${userName}! Redirecting...`, true);
-        
-        setTimeout(() => {
-            window.location.href = 'profile.html';
-        }, 2000);
-    }
-});
+                if (error) throw error;
+
+                // Show success message
+                successMessage.textContent = 'Login successful! Redirecting...';
+                successMessage.style.display = 'block';
+                supabaseError.style.display = 'none';
+                
+                // Redirect to profile page after 2 seconds
+                setTimeout(() => {
+                    window.location.href = 'profile.html';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                supabaseError.textContent = getSupabaseErrorMessage(error.message);
+                supabaseError.style.display = 'block';
+                successMessage.style.display = 'none';
+            } finally {
+                // Reset loading state
+                loginLoader.style.display = 'none';
+                loginText.textContent = 'Sign In';
+                loginButton.disabled = false;
+            }
+        });
+
+        // Google sign-in
+        googleSignInBtn.addEventListener('click', async function() {
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.origin + '/profile.html'
+                    }
+                });
+
+                if (error) throw error;
+
+            } catch (error) {
+                console.error('Google sign-in error:', error);
+                supabaseError.textContent = getSupabaseErrorMessage(error.message);
+                supabaseError.style.display = 'block';
+            }
+        });
+
+        // Helper function to translate Supabase error messages
+        function getSupabaseErrorMessage(message) {
+            if (message.includes('Invalid login credentials')) {
+                return 'Invalid email or password. Please try again.';
+            }
+            if (message.includes('Email not confirmed')) {
+                return 'Please verify your email address before signing in.';
+            }
+            if (message.includes('Email rate limit exceeded')) {
+                return 'Too many login attempts. Please try again later.';
+            }
+            return message || 'An error occurred. Please try again.';
+        }
+
+        // Check if user is already logged in
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                window.location.href = 'profile.html';
+            }
+        });
+
+        // Forgot password functionality
+        document.querySelector('.forgot-password').addEventListener('click', function(e) {
+            e.preventDefault();
+            const email = prompt('Please enter your email address to reset your password:');
+            if (email) {
+                supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/reset-password.html'
+                }).then(({ error }) => {
+                    if (error) {
+                        alert('Error sending reset email: ' + error.message);
+                    } else {
+                        alert('Password reset email sent! Check your inbox.');
+                    }
+                });
+            }
+        });
+  
