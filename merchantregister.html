@@ -542,6 +542,26 @@
         const backButton = document.getElementById('backButton');
         const loadingOverlay = document.getElementById('loadingOverlay');
 
+        // Add UPI validation function
+function validateUPI(upi) {
+    const upiRegex = /^[a-zA-Z0-9.\-_]{2,49}@[a-zA-Z]{2,}$/;
+    return upiRegex.test(upi);
+}
+
+// Update form validation to include UPI check
+function validateForm() {
+    // ... existing validation ...
+    
+    // Validate UPI ID
+    const upiId = document.getElementById('upi_id').value.trim();
+    if (!upiId || !validateUPI(upiId)) {
+        document.getElementById('upi_id').classList.add('is-invalid');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
         // Services array
         let services = [];
 
