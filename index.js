@@ -581,10 +581,6 @@
             document.querySelectorAll('.barber-card').forEach(card => {
                 card.classList.remove('selected');
             });
-
-            if (currentSalon) {
-              document.getElementById('salonUpiId').value = currentSalon.upi_id || 'Not available';
-            }
             
             document.querySelectorAll('.service-checkbox').forEach(checkbox => {
                 checkbox.classList.remove('selected');
