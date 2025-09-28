@@ -8,7 +8,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
+        /* ... (keep all your existing CSS styles) ... */
+        /* ... (keep all your existing CSS styles) ... */
+         :root {
             --primary: #000;
             --secondary: #8a6d3b;
             --light: #f9f9f9;
@@ -591,6 +593,7 @@
                 font-size: 16px;
             }
         }
+        /* ... (keep all your existing CSS styles) ... */
     </style>
 </head>
 <body>
@@ -632,9 +635,21 @@
         </div>
     </div>
 
- 
     <!-- Bottom Navigation -->
-   
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+        <a href="bookings.html" class="nav-item active">
+            <i class="fas fa-calendar"></i>
+            <span>Bookings</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
 
     <!-- Salon Details Modal -->
     <div class="modal fade" id="salonModal" tabindex="-1">
@@ -706,18 +721,14 @@
             
             <div id="step3" class="step-content">
                 <h5>Select Date & Time</h5>
-                <p class="text-muted mb-3">Choose your preferred date and time slot</p>
-                
-                <div class="form-group">
-                    <label class="form-label">Select Date</label>
-                    <input type="date" class="form-control" id="bookingDate" min="">
+                <div class="mb-3">
+                    <label for="bookingDate" class="form-label">Select Date</label>
+                    <input type="date" class="form-control" id="bookingDate">
                 </div>
-                
-                <div class="form-group">
+                <div class="mb-3">
                     <label class="form-label">Available Time Slots</label>
-                    <div id="timeSlots"></div>
+                    <div id="timeSlots" class="time-slots-container"></div>
                 </div>
-                
                 <div class="d-flex justify-content-between mt-4">
                     <button type="button" class="btn btn-outline" id="backToStep2">Previous</button>
                     <button type="button" class="btn btn-primary" id="nextToStep4">Next</button>
@@ -726,42 +737,30 @@
             
             <div id="step4" class="step-content">
                 <h5>Your Details</h5>
-                <p class="text-muted mb-3">Your name and phone number are fetched from your profile</p>
-                
-                <div class="form-group">
-                    <label class="form-label">Full Name *</label>
+                <div class="mb-3">
+                    <label for="customerName" class="form-label">Full Name</label>
                     <input type="text" class="form-control" id="customerName" readonly>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Phone Number *</label>
+                <div class="mb-3">
+                    <label for="customerPhone" class="form-label">Phone Number</label>
                     <input type="tel" class="form-control" id="customerPhone" readonly>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Email (Optional)</label>
-                    <input type="email" class="form-control" id="customerEmail">
+                <div class="mb-3">
+                    <label for="customerEmail" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="customerEmail" readonly>
                 </div>
-
-              <!-- Remove or fix this field (it has wrong id and type) -->
-               <div class="form-group">
-                   <label class="form-label">UPi id  *</label>
-                   <input type="tel" class="form-control" id="upi_id" readonly>
-               </div>
-                
-                  
-                
-                <div class="form-group">
-                    <label class="form-label">UTR Number (Advance Payment Proof) *</label>
-                    <input type="text" class="form-control" id="customerUTR" required>
-                    <small class="text-muted">This UTR will only be visible to you and the selected barber</small>
+                <div class="mb-3">
+                    <label for="upi_id" class="form-label">Salon UPI ID</label>
+                    <input type="text" class="form-control" id="upi_id" readonly>
                 </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Special Instructions (Optional)</label>
-                    <textarea class="form-control" id="specialInstructions" rows="3"></textarea>
+                <div class="mb-3">
+                    <label for="customerUTR" class="form-label">UTR Number</label>
+                    <input type="text" class="form-control" id="customerUTR" placeholder="Enter your UTR number">
                 </div>
-                
+                <div class="mb-3">
+                    <label for="specialInstructions" class="form-label">Special Instructions (Optional)</label>
+                    <textarea class="form-control" id="specialInstructions" rows="3" placeholder="Any special requirements or instructions..."></textarea>
+                </div>
                 <div class="d-flex justify-content-between mt-4">
                     <button type="button" class="btn btn-outline" id="backToStep3">Previous</button>
                     <button type="button" class="btn btn-primary" id="confirmBooking">Confirm Booking</button>
@@ -770,27 +769,9 @@
         </div>
     </div>
 
-
-     <nav class="bottom-nav">
-        <a href="#" class="nav-item">
-            <i class="fas fa-search"></i>
-            <span>Search</span>
-        </a>
-        <a href="bookings.html" class="nav-item active">
-            <i class="fas fa-calendar"></i>
-            <span>Bookings</span>
-        </a>
-        <a href="profile.html" class="nav-item">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </nav>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script src="index.js"></script>
+    <script>
+        // The JavaScript code above goes here
+    </script>
 </body>
 </html>
