@@ -1,9 +1,26 @@
 // Supabase configuration
 const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xU8McQCWvDFzNhgw';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
+
+// Initialize Supabase client with error handling
+let supabase;
+try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true
+        }
+    });
+    console.log('Supabase client initialized successfully');
+} catch (error) {
+    console.error('Error initializing Supabase client:', error);
+}
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Test Supabase connection
+    testSupabaseConnection();
+    
     // DOM Elements
     const registerForm = document.getElementById('registerForm');
     const fullNameInput = document.getElementById('fullName');
@@ -30,6 +47,34 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phonePattern = /^[6-9]\d{9}$/; // Indian phone number format
     const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    // Test Supabase connection
+    async function testSupabaseConnection() {
+        if (!supabase) {
+            console.error('Supabase client not initialized');
+            showSupabaseError('Connection error: Please refresh the page');
+            return;
+        }
+        
+        try {
+            // Test the connection by making a simple query
+            const { data, error } = await supabase.from('users').select('count').limit(1);
+            
+            if (error) {
+                console.error('Supabase connection test failed:', error);
+                if (error.message.includes('JWT')) {
+                    showSupabaseError('Authentication error: Invalid API key. Please check your Supabase configuration.');
+                } else {
+                    showSupabaseError('Connection error: ' + error.message);
+                }
+            } else {
+                console.log('Supabase connection test successful');
+            }
+        } catch (error) {
+            console.error('Supabase connection test error:', error);
+            showSupabaseError('Failed to connect to server. Please try again later.');
+        }
+    }
 
     // Password toggle functionality
     registerPasswordToggle.addEventListener('click', function() {
@@ -85,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (!phonePattern.test(phone)) {
-            showError(phoneInput, phoneError, 'Please enter a valid 10-digit phone number');
+            showError(phoneInput, phoneError, 'Please enter a valid 10-digit phone number starting with 6-9');
             return false;
         }
         
@@ -219,9 +264,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function showSupabaseError(message) {
         supabaseError.textContent = message;
         supabaseError.style.display = 'block';
-        setTimeout(() => {
-            supabaseError.style.display = 'none';
-        }, 5000);
+        // Don't auto-hide connection errors
+        if (!message.includes('connection') && !message.includes('API key')) {
+            setTimeout(() => {
+                supabaseError.style.display = 'none';
+            }, 5000);
+        }
     }
 
     function showSuccessMessage(message) {
@@ -246,6 +294,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Google Sign In
     document.getElementById('googleSignIn').addEventListener('click', async function() {
+        if (!supabase) {
+            showSupabaseError('Connection error: Please refresh the page');
+            return;
+        }
+        
         try {
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
@@ -264,6 +317,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission
     registerForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        // Check if Supabase is initialized
+        if (!supabase) {
+            showSupabaseError('Connection error: Please refresh the page and try again');
+            return;
+        }
         
         // Validate all fields
         const isNameValid = validateFullName();
@@ -289,6 +348,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 password: passwordInput.value
             };
             
+            console.log('Attempting to register user:', userData.email);
+            
             // Step 1: Sign up with Supabase Auth
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: userData.email,
@@ -301,7 +362,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            if (authError) throw authError;
+            if (authError) {
+                console.error('Auth error:', authError);
+                throw authError;
+            }
+            
+            console.log('Auth successful, user created:', authData.user);
             
             if (authData.user) {
                 // Step 2: Create user record in the users table
@@ -320,10 +386,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     .select();
                 
                 if (userError) {
-                    // If user record creation fails, we might want to delete the auth user
-                    // But for now, just throw the error
+                    console.error('User table insert error:', userError);
                     throw userError;
                 }
+                
+                console.log('User record created:', userRecord);
                 
                 // Success!
                 showSuccessMessage('Account created successfully! Please check your email for verification.');
@@ -339,12 +406,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Registration error:', error);
             
             // Handle specific error cases
-            if (error.message.includes('User already registered')) {
+            if (error.message.includes('User already registered') || error.message.includes('already exists')) {
                 showSupabaseError('An account with this email already exists. Please try logging in.');
             } else if (error.message.includes('invalid_email')) {
                 showSupabaseError('Please enter a valid email address.');
             } else if (error.message.includes('weak_password')) {
                 showSupabaseError('Password is too weak. Please choose a stronger password.');
+            } else if (error.message.includes('Invalid API key') || error.message.includes('JWT')) {
+                showSupabaseError('Configuration error: Invalid API key. Please contact support.');
             } else {
                 showSupabaseError('Registration failed: ' + error.message);
             }
