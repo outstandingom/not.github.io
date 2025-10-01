@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProCut | Become a Merchant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #000;
+            --secondary: #8a6d3b;
+            --light: #f9f9f9;
+            --accent: #ff6b6b;
+            --success: #28a745;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #fff;
+            color: var(--primary);
+            padding-bottom: 70px;
+        }
+        
+        .merchant-header {
+            background-color: var(--light);
+            padding: 20px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .merchant-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .merchant-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .merchant-card-title {
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            color: var(--secondary);
+        }
+        
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .form-control, .form-select {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            transition: border 0.3s;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 0.2rem rgba(138, 109, 59, 0.25);
+        }
+        
+        .salon-image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            display: none;
+            margin-bottom: 15px;
+            border: 1px dashed #ddd;
+        }
+        
+        .upload-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--light);
+            border: 1px dashed #e0e0e0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background-color: #f0f0f0;
+            border-color: var(--secondary);
+        }
+        
+        .service-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .service-details {
+            flex: 1;
+        }
+        
+        .remove-service {
+            color: #ff6b6b;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        
+        .remove-service:hover {
+            transform: scale(1.1);
+        }
+        
+        .progress-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            z-index: 1000;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: var(--secondary);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .logo span {
+            color: var(--secondary);
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary);
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #7a5f32;
+            transform: translateY(-2px);
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .toast {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-left: 4px solid var(--success);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .toast.error {
+            border-left-color: var(--accent);
+        }
+        
+        .map-preview {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777;
+            margin-top: 10px;
+            border: 1px dashed #ddd;
+        }
+        
+        .map-preview i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .success-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .success-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        
+        .success-modal.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .success-icon {
+            font-size: 80px;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+        
+        .time-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .time-input input {
+            width: 80px;
+            text-align: center;
+        }
+        
+        .invalid-feedback {
+            display: none;
+            width: 100%;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            font-size: 0.875em;
+            color: #dc3545;
+        }
+        
+        .was-validated .form-control:invalid ~ .invalid-feedback,
+        .form-control.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+        
+        .was-validated .form-control:invalid,
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            padding-right: calc(1.5em + 0.75rem);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6.4.4.4-.4'/%3e%3cpath d='M6 7v1'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        
+        .service-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .service-input-group input {
+            flex: 1;
+        }
+        
+        .service-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Processing your registration...</p>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Success Modal -->
+    <div class="success-modal" id="successModal">
+        <div class="modal-content">
+            <i class="fas fa-check-circle success-icon"></i>
+            <h3 class="mb-3">Registration Successful!</h3>
+            <p class="mb-4">Your salon has been registered successfully. You're now a ProCut merchant.</p>
+            <button class="btn btn-primary w-100 py-3" id="continueBtn">
+                Continue to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="sticky-top bg-white shadow-sm">
+        <div class="container py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="logo">Pro<span>Cut</span></div>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-arrow-left me-3" style="font-size: 20px; cursor: pointer;" id="backButton"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Merchant Header -->
+        <div class="merchant-header">
+            <div class="container">
+                <h2 class="mb-3">Become a Merchant</h2>
+                <p class="text-muted">Register your salon to start accepting bookings from customers.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container py-4">
+        <form id="merchantRegistrationForm" novalidate>
+            <!-- Salon Information -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title"><i class="fas fa-store me-2"></i>Salon Information</h5>
+                
+                <div class="mb-3">
+                    <label for="salonName" class="form-label">Salon Name *</label>
+                    <input type="text" class="form-control" id="salonName" placeholder="Enter salon name" required>
+                    <div class="invalid-feedback">Please provide a salon name.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="salonDescription" class="form-label">Description</label>
+                    <textarea class="form-control" id="salonDescription" rows="3" placeholder="Describe your salon and services"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="salonAddress" class="form-label">Address *</label>
+                    <textarea class="form-control" id="salonAddress" rows="2" placeholder="Full address of your salon" required></textarea>
+                    <div class="invalid-feedback">Please provide a salon address.</div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="salonCity" class="form-label">City *</label>
+                        <input type="text" class="form-control" id="salonCity" placeholder="City" required>
+                        <div class="invalid-feedback">Please provide a city.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="mapLink" class="form-label">Google Maps Location Link</label>
+                        <input type="url" class="form-control" id="mapLink" name="mapLink" placeholder="https://maps.app.goo.gl/...">
+                        <div class="invalid-feedback">Please provide a valid URL.</div>
+                    </div>
+                </div>
+                
+                <div id="mapPreview" class="map-preview">
+                    <div class="text-center">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <p class="mt-2">Map preview will appear here</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Salon Images -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title"><i class="fas fa-images me-2"></i>Salon Images</h5>
+                
+                <img id="salonImagePreview" class="salon-image-preview" alt="Salon preview">
+                
+                <label for="salonImageUrl" class="upload-btn">
+                    <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                    <div>Enter Salon Image URL</div>
+                    <small class="text-muted">Image URL (optional)</small>
+                </label>
+                <input type="url" class="form-control" id="salonImageUrl" placeholder="Paste image URL here">
+                <div class="invalid-feedback">Please provide a valid image URL.</div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title"><i class="fas fa-id-card me-2"></i>Contact Information</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="contactName" class="form-label">Contact Person *</label>
+                        <input type="text" class="form-control" id="contactName" placeholder="Name" required>
+                        <div class="invalid-feedback">Please provide a contact name.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="contactPhone" class="form-label">Phone Number *</label>
+                        <input type="tel" class="form-control" id="contactPhone" placeholder="Phone" required pattern="[0-9]{10}">
+                        <div class="invalid-feedback">Please provide a valid 10-digit phone number.</div>
+                    </div>
+                      <div class="col-md-6">
+                        <label for="contactPhone" class="form-label">UPI ID *</label>
+                        <input type="text" class="form-control" id="upi_id" placeholder="Enter UPI id" required pattern="[0-9]{10}">
+                        <div class="invalid-feedback">Please enter UPI Id to recived payment </div>
+                    </div>
+                </div>
+                
+                <label for="contactEmail" class="form-label">Email *</label>
+                <input type="email" class="form-control" id="contactEmail" placeholder="Email" required>
+                <div class="invalid-feedback">Please provide a valid email address.</div>
+            </div>
+            
+            <!-- Business Hours -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title"><i class="fas fa-clock me-2"></i>Business Hours</h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="openingTime" class="form-label">Opening Time *</label>
+                        <input type="time" class="form-control" id="openingTime" value="10:00" required>
+                        <div class="invalid-feedback">Please select opening time.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="closingTime" class="form-label">Closing Time *</label>
+                        <input type="time" class="form-control" id="closingTime" value="20:00" required>
+                        <div class="invalid-feedback">Please select closing time.</div>
+                    </div>
+                </div>
+                
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="sundayClosed" checked>
+                    <label class="form-check-label" for="sundayClosed">
+                        Closed on Sundays
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Services Offered -->
+            <div class="merchant-card">
+                <h5 class="merchant-card-title"><i class="fas fa-scissors me-2"></i>Services Offered</h5>
+                
+                <div id="servicesList">
+                    <div class="alert alert-info">
+                        No services added yet. Add your first service below.
+                    </div>
+                </div>
+                
+                <div class="service-input-group">
+                    <input type="text" class="form-control" id="serviceNameInput" placeholder="Service name (e.g., Haircut)" required>
+                    <input type="number" class="form-control" id="servicePriceInput" placeholder="Price (₹)" required min="1" step="0.01">
+                    <div class="time-input">
+                        <input type="number" class="form-control" id="serviceTimeInput" placeholder="Time" required min="5" max="480">
+                        <span>minutes</span>
+                    </div>
+                    <div class="service-actions">
+                        <button type="button" class="btn btn-success" id="addServiceBtn">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="servicesError" class="invalid-feedback mt-2" style="display: none;">Please add at least one service.</div>
+            </div>
+            
+            <!-- Terms & Conditions -->
+            <div class="merchant-card">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="termsAgree" required>
+                    <label class="form-check-label" for="termsAgree">
+                        I agree to the <a href="#" class="text-decoration-none">Terms & Conditions</a> and <a href="#" class="text-decoration-none">Merchant Agreement</a>
+                    </label>
+                    <div class="invalid-feedback">You must agree to the terms and conditions.</div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary w-100 py-3 mt-4" id="registerMerchantBtn">
+                Register as Merchant
+            </button>
+        </form>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src='mrc.js'></script>
+</body>
+</html>
