@@ -91,37 +91,7 @@
             z-index: 1;
         }
         
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid #e0e0e0;
-            padding: 10px 0;
-            z-index: 1000;
-        }
         
-        .nav-item {
-            text-align: center;
-            text-decoration: none;
-            color: #666;
-            flex: 1;
-        }
-        
-        .nav-item.active {
-            color: var(--secondary);
-        }
-        
-        .nav-icon {
-            font-size: 20px;
-            margin-bottom: 4px;
-        }
-        
-        .nav-text {
-            font-size: 12px;
-            font-weight: 500;
-        }
         
         .loading-overlay {
             position: fixed;
@@ -131,7 +101,49 @@
             height: 100%;
             background: rgba(255, 255, 255, 0.95);
             display: flex;
-            align-items: center;
+            alig        /* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 1000;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #777;
+    font-size: 0.75rem;
+    transition: all 0.3s;
+    padding: 5px 10px;
+    border-radius: 8px;
+    flex: 1;
+    max-width: 25%;
+}
+
+.nav-item.active {
+    color: var(--secondary, #8a6d3b);
+}
+
+.nav-item i {
+    font-size: 1.2rem;
+    margin-bottom: 3px;
+}
+
+.nav-item:hover {
+    color: var(--secondary, #8a6d3b);
+    background-color: rgba(138, 109, 59, 0.05);
+}
+        n-items: center;
             justify-content: center;
             z-index: 2000;
         }
@@ -505,30 +517,7 @@
     </div>
 
     <!-- Bottom Navigation -->
-    <div class="bottom-nav">
-        <div class="container">
-            <div class="d-flex justify-content-around">
-                <a href="#" class="nav-item active">
-                    <div class="nav-icon">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <div class="nav-text">Nearby</div>
-                </a>
-                <a href="bookings.html" class="nav-item">
-                    <div class="nav-icon">
-                        <i class="fas fa-calendar-check"></i>
-                    </div>
-                    <div class="nav-text">Bookings</div>
-                </a>
-                <a href="profile.html" class="nav-item">
-                    <div class="nav-icon">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="nav-text">Profile</div>
-                </a>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
@@ -652,6 +641,24 @@
             </div>
         </div>
     </div>
+    <nav class="bottom-nav">
+    <a href="index.html" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+    </a>
+    <a href="ipp.html" class="nav-item">
+        <i class="fas fa-search"></i>
+        <span>Search</span>
+    </a>
+    <a href="bookings.html" class="nav-item">
+        <i class="fas fa-calendar"></i>
+        <span>Bookings</span>
+    </a>
+    <a href="profile.html" class="nav-item">
+        <i class="fas fa-user"></i>
+        <span>Salons</span>
+    </a>
+    </nav>
 
     <script>
         // Supabase configuration
