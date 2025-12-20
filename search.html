@@ -20,7 +20,7 @@
             margin: 0;
             padding: 0;
             background: white;
-            padding-bottom: 70px; /* Added for bottom nav */
+            padding-bottom: 70px;
         }
         
         .header {
@@ -87,12 +87,11 @@
         }
         
         #map {
-            height: calc(100vh - 200px); /* Adjusted for bottom nav */
+            height: calc(100vh - 200px);
             width: 100%;
             z-index: 1;
         }
         
-        /* FIXED: Added dot (.) before bottom-nav */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -196,7 +195,7 @@
         
         .current-location-btn {
             position: absolute;
-            bottom: 90px; /* Adjusted for bottom nav */
+            bottom: 90px;
             right: 15px;
             z-index: 1000;
             background: white;
@@ -213,7 +212,7 @@
         
         .search-salons-btn {
             position: absolute;
-            bottom: 145px; /* Adjusted for bottom nav */
+            bottom: 145px;
             right: 15px;
             z-index: 1000;
             background: var(--secondary);
@@ -638,7 +637,7 @@
         </div>
     </div>
 
-    <!-- Bottom Navigation - MOVED TO CORRECT POSITION -->
+    <!-- Bottom Navigation -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item">
             <i class="fas fa-home"></i>
@@ -881,89 +880,98 @@
             });
         }
 
-        // Search nearby salons - FIXED VERSION
+        // SIMPLIFIED SEARCH FUNCTION - Just get all salons for testing
         async function searchNearbySalons() {
             console.log('Searching nearby salons...');
-            if (!userLatitude || !userLongitude) {
-                console.error('User location not available');
-                showToast('Please enable location services first', 'error');
-                return;
-            }
             
             showLoading(true);
             
             try {
-                console.log('Searching salons with user location:', userLatitude, userLongitude);
+                // FIRST: Let's just get ALL salons to see what's in the database
+                console.log('Fetching all salons from database...');
                 
-                // FIRST: Try to use the PostGIS function if it exists
-                try {
-                    const { data: salons, error } = await supabase
-                        .rpc('nearby_salons', {
-                            user_lat: userLatitude,
-                            user_long: userLongitude,
-                            max_dist: 10000  // 10 km in meters
-                        });
-
-                    if (!error && salons && salons.length > 0) {
-                        console.log('Salons found via PostGIS:', salons.length);
-                        displaySalonsOnMap(salons);
+                const { data: allSalons, error } = await supabase
+                    .from('salons')
+                    .select('*');
+                
+                if (error) {
+                    console.error('Error fetching salons:', error);
+                    showToast('Error fetching salons: ' + error.message, 'error');
+                    showLoading(false);
+                    return;
+                }
+                
+                console.log('ALL salons from database:', allSalons);
+                console.log('Number of salons:', allSalons ? allSalons.length : 0);
+                
+                if (!allSalons || allSalons.length === 0) {
+                    console.log('No salons found in database at all');
+                    showToast('No salons available yet. Be the first to register!', 'info');
+                    showLoading(false);
+                    return;
+                }
+                
+                // Display what we found
+                allSalons.forEach(salon => {
+                    console.log('Salon found:', {
+                        id: salon.id,
+                        name: salon.name,
+                        status: salon.status,
+                        latitude: salon.latitude,
+                        longitude: salon.longitude,
+                        address: salon.address
+                    });
+                });
+                
+                // Now filter for active salons with coordinates
+                const activeSalons = allSalons.filter(salon => 
+                    salon.status === 'active' && 
+                    salon.latitude && 
+                    salon.longitude
+                );
+                
+                console.log('Active salons with coordinates:', activeSalons.length);
+                
+                if (activeSalons.length === 0) {
+                    console.log('No active salons with coordinates');
+                    
+                    // Show ALL salons anyway for debugging
+                    console.log('Showing ALL salons for debugging...');
+                    displaySalonsOnMap(allSalons, true);
+                    showToast(`Found ${allSalons.length} salons (including inactive)`, 'info');
+                    showLoading(false);
+                    return;
+                }
+                
+                // If we have user location, calculate distances
+                if (userLatitude && userLongitude) {
+                    const salonsWithDistance = activeSalons.map(salon => {
+                        const distance = calculateDistance(
+                            userLatitude, 
+                            userLongitude, 
+                            parseFloat(salon.latitude), 
+                            parseFloat(salon.longitude)
+                        );
+                        return {
+                            ...salon,
+                            dist_meters: distance * 1000,
+                            dist_km: distance
+                        };
+                    }).sort((a, b) => a.dist_km - b.dist_km);
+                    
+                    console.log('Nearby salons after distance calculation:', salonsWithDistance.length);
+                    
+                    if (salonsWithDistance.length === 0) {
+                        showToast('No salons found nearby', 'info');
                         showLoading(false);
                         return;
                     }
-                } catch (postgisError) {
-                    console.log('PostGIS function not available or no results:', postgisError);
+                    
+                    displaySalonsOnMap(salonsWithDistance);
+                } else {
+                    // No user location, just show all active salons
+                    displaySalonsOnMap(activeSalons);
                 }
-                
-                // SECOND: Fallback to direct SQL query
-                console.log('Using fallback SQL query...');
-                
-                // Get ALL active salons with coordinates
-                const { data: allSalons, error: salonsError } = await supabase
-                    .from('salons')
-                    .select('*')
-                    .eq('status', 'active')  // Only active salons
-                    .not('latitude', 'is', null)  // Only salons with coordinates
-                    .not('longitude', 'is', null);
-
-                if (salonsError) {
-                    console.error('Error fetching salons:', salonsError);
-                    throw salonsError;
-                }
-                
-                console.log('All salons from database:', allSalons ? allSalons.length : 0);
-                
-                if (!allSalons || allSalons.length === 0) {
-                    console.log('No salons found in database');
-                    showToast('No salons available in your area yet', 'error');
-                    showLoading(false);
-                    return;
-                }
-                
-                // Calculate distance for each salon and filter by 10km radius
-                const salonsWithDistance = allSalons.map(salon => {
-                    const distance = calculateDistance(
-                        userLatitude, 
-                        userLongitude, 
-                        parseFloat(salon.latitude), 
-                        parseFloat(salon.longitude)
-                    );
-                    return {
-                        ...salon,
-                        dist_meters: distance * 1000,
-                        dist_km: distance
-                    };
-                }).filter(salon => salon.dist_km <= 10)  // Only show within 10km
-                  .sort((a, b) => a.dist_km - b.dist_km);
-                
-                console.log('Nearby salons after filtering:', salonsWithDistance.length);
-                
-                if (salonsWithDistance.length === 0) {
-                    showToast('No salons found within 10km radius', 'error');
-                    showLoading(false);
-                    return;
-                }
-                
-                displaySalonsOnMap(salonsWithDistance);
                 
             } catch (error) {
                 console.error('Error searching salons:', error);
@@ -987,15 +995,26 @@
         }
 
         // Display salons on map
-        function displaySalonsOnMap(salons) {
+        function displaySalonsOnMap(salons, showAll = false) {
             // Clear existing salon markers
             salonMarkers.forEach(marker => marker.remove());
             salonMarkers = [];
             
+            if (salons.length === 0) {
+                showToast('No salons to display', 'info');
+                return;
+            }
+            
+            console.log('Displaying salons on map:', salons.length);
+            
             // Add salon markers to map
             salons.forEach((salon, index) => {
                 const salonImage = salon.image_url || demoSalonImages[index % demoSalonImages.length];
-                const distanceKm = (salon.dist_meters / 1000).toFixed(1);
+                let distanceKm = 'N/A';
+                
+                if (salon.dist_km) {
+                    distanceKm = salon.dist_km.toFixed(1);
+                }
                 
                 // Create custom icon for salon
                 const salonIcon = L.divIcon({
@@ -1007,29 +1026,38 @@
                     iconAnchor: [12, 12]
                 });
                 
+                const popupContent = `
+                    <div class="salon-popup">
+                        <img src="${salonImage}" alt="${salon.name}" loading="lazy">
+                        <div class="popup-title">${salon.name}</div>
+                        ${distanceKm !== 'N/A' ? `
+                        <div class="popup-distance">
+                            <i class="fas fa-map-marker-alt me-1"></i>${distanceKm} km away
+                        </div>
+                        ` : ''}
+                        <div class="popup-rating">
+                            <i class="fas fa-star"></i> ${salon.rating || '4.5'}
+                        </div>
+                        <p style="font-size: 11px; color: #666; margin: 5px 0;">${salon.address || 'Address not available'}</p>
+                        <p style="font-size: 10px; color: #999; margin: 3px 0;">Status: ${salon.status || 'unknown'}</p>
+                        <button class="btn btn-primary btn-sm popup-button" onclick="openBookingPanel('${salon.id}')">
+                            <i class="fas fa-calendar-plus me-1"></i>Book Now
+                        </button>
+                    </div>
+                `;
+                
                 const marker = L.marker([salon.latitude, salon.longitude], { icon: salonIcon })
                     .addTo(map)
-                    .bindPopup(`
-                        <div class="salon-popup">
-                            <img src="${salonImage}" alt="${salon.name}" loading="lazy">
-                            <div class="popup-title">${salon.name}</div>
-                            <div class="popup-distance">
-                                <i class="fas fa-map-marker-alt me-1"></i>${distanceKm} km away
-                            </div>
-                            <div class="popup-rating">
-                                <i class="fas fa-star"></i> ${salon.rating || '4.5'}
-                            </div>
-                            <p style="font-size: 11px; color: #666; margin: 5px 0;">${salon.address || 'Address not available'}</p>
-                            <button class="btn btn-primary btn-sm popup-button" onclick="openBookingPanel('${salon.id}')">
-                                <i class="fas fa-calendar-plus me-1"></i>Book Now
-                            </button>
-                        </div>
-                    `);
+                    .bindPopup(popupContent);
                 
                 salonMarkers.push(marker);
             });
             
-            showToast(`Found ${salons.length} salons nearby`, 'success');
+            const message = showAll ? 
+                `Found ${salons.length} salons (including inactive)` : 
+                `Found ${salons.length} salons nearby`;
+            
+            showToast(message, 'success');
         }
 
         // Show/hide loading overlay
@@ -1041,7 +1069,7 @@
         function showToast(message, type = 'success') {
             const toastContainer = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+            toast.className = `toast ${type === 'error' ? 'error' : type === 'info' ? 'info' : ''}`;
             toast.textContent = message;
             
             toastContainer.appendChild(toast);
