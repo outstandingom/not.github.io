@@ -689,7 +689,6 @@
         let selectedTime = null;
         let selectedServices = [];
         let currentUser = null;
-        let hasSearchedSalons = false;
 
         // DOM elements
         const locationText = document.getElementById('locationText');
@@ -827,9 +826,22 @@
                         
                         console.log('Location obtained:', userLatitude, userLongitude);
                         
-                        // SIMPLE: Just show coordinates or a simple message
-                        // Don't use reverse geocoding which causes "Pandaria" issue
-                        currentAddress = `Location: ${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`;
+                        // Try to get address, but don't fail if it doesn't work
+                        try {
+                            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLatitude}&lon=${userLongitude}&zoom=10`;
+                            const response = await fetch(url);
+                            const data = await response.json();
+                            
+                            if (data.display_name) {
+                                currentAddress = data.display_name.split(',').slice(0, 3).join(',');
+                            } else {
+                                currentAddress = `Location: ${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`;
+                            }
+                        } catch (error) {
+                            console.log('Error getting address, using coordinates');
+                            currentAddress = `Location: ${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`;
+                        }
+                        
                         locationText.textContent = currentAddress;
                         
                         resolve({ 
@@ -944,7 +956,6 @@
                 }
                 
                 displaySalonsOnMap(salonsWithDistance);
-                hasSearchedSalons = true;
                 
                 showToast(`Found ${salonsWithDistance.length} salons nearby`, 'success');
                 
@@ -1298,7 +1309,7 @@
             }
         }
 
-        // Initialize the application - NO AUTO-SEARCH
+        // Initialize the application
         async function init() {
             console.log('Initializing application...');
             showLoading(true);
