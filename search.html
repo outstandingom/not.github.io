@@ -484,6 +484,47 @@
             margin-left: 5px;
             font-style: italic;
         }
+        
+        .welcome-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 90%;
+            width: 400px;
+            display: none;
+        }
+        
+        .welcome-icon {
+            font-size: 48px;
+            color: var(--secondary);
+            margin-bottom: 15px;
+        }
+        
+        .search-instructions {
+            position: absolute;
+            bottom: 200px;
+            right: 15px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-width: 250px;
+            display: none;
+        }
+        
+        .search-instructions i {
+            color: var(--secondary);
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -492,6 +533,32 @@
     
     <!-- Overlay for booking panel -->
     <div class="overlay" id="bookingOverlay"></div>
+
+    <!-- Welcome Message -->
+    <div class="welcome-message" id="welcomeMessage">
+        <div class="welcome-icon">
+            <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <h4>Welcome to SevaOnTime!</h4>
+        <p class="text-muted">Get your current location to find nearby salons.</p>
+        <p class="text-muted mb-3">Click the location button below or use the search button to find salons near you.</p>
+        <div class="d-flex justify-content-center gap-2">
+            <button class="btn btn-primary" id="getLocationBtn">
+                <i class="fas fa-location-arrow me-1"></i> Get My Location
+            </button>
+            <button class="btn btn-outline-secondary" id="skipLocationBtn">
+                Skip for Now
+            </button>
+        </div>
+    </div>
+
+    <!-- Search Instructions -->
+    <div class="search-instructions" id="searchInstructions">
+        <i class="fas fa-search"></i>
+        <h6>Search Nearby Salons</h6>
+        <p class="text-muted small">Click this button to find salons near your current location</p>
+        <button class="btn btn-sm btn-primary w-100" id="gotItBtn">Got it!</button>
+    </div>
 
     <!-- Header -->
     <div class="header">
@@ -700,6 +767,8 @@
         let existingBookings = [];
         let currentUser = null;
         let isUsingDefaultLocation = false;
+        let hasSearchedSalons = false;
+        let hasWelcomeShown = false;
 
         // DOM elements
         const locationText = document.getElementById('locationText');
@@ -710,6 +779,11 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
         const marqueeContent = document.getElementById('marqueeContent');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const searchInstructions = document.getElementById('searchInstructions');
+        const getLocationBtn = document.getElementById('getLocationBtn');
+        const skipLocationBtn = document.getElementById('skipLocationBtn');
+        const gotItBtn = document.getElementById('gotItBtn');
 
         // Demo salon images
         const demoSalonImages = [
@@ -917,9 +991,6 @@
             locationAccuracy.style.color = '#ff6b6b';
             locationText.textContent = currentAddress;
             
-            // Show toast notification
-            showToast(`Using default location: ${reason}`, 'info');
-            
             return { 
                 latitude: userLatitude, 
                 longitude: userLongitude,
@@ -979,9 +1050,16 @@
             });
         }
 
-        // Search nearby salons
+        // Search nearby salons - ONLY CALLED WHEN USER CLICKS SEARCH BUTTON
         async function searchNearbySalons() {
             console.log('Searching nearby salons...');
+            
+            // Check if user has location
+            if (!userLatitude || !userLongitude) {
+                showToast('Please get your location first', 'error');
+                showWelcomeMessage();
+                return;
+            }
             
             showLoading(true);
             loadingText.textContent = 'Searching nearby salons...';
@@ -1010,18 +1088,6 @@
                     return;
                 }
                 
-                // Display what we found
-                allSalons.forEach(salon => {
-                    console.log('Salon found:', {
-                        id: salon.id,
-                        name: salon.name,
-                        status: salon.status,
-                        latitude: salon.latitude,
-                        longitude: salon.longitude,
-                        address: salon.address
-                    });
-                });
-                
                 // Filter for active salons with coordinates
                 const activeSalons = allSalons.filter(salon => 
                     salon.status === 'active' && 
@@ -1042,41 +1108,41 @@
                     return;
                 }
                 
-                // If we have user location, calculate distances
-                if (userLatitude && userLongitude) {
-                    const salonsWithDistance = activeSalons.map(salon => {
-                        const distance = calculateDistance(
-                            userLatitude, 
-                            userLongitude, 
-                            parseFloat(salon.latitude), 
-                            parseFloat(salon.longitude)
-                        );
-                        return {
-                            ...salon,
-                            dist_meters: distance * 1000,
-                            dist_km: distance
-                        };
-                    }).sort((a, b) => a.dist_km - b.dist_km);
-                    
-                    console.log('Nearby salons after distance calculation:', salonsWithDistance.length);
-                    
-                    if (salonsWithDistance.length === 0) {
-                        showToast('No salons found nearby', 'info');
-                        showLoading(false);
-                        return;
-                    }
-                    
-                    displaySalonsOnMap(salonsWithDistance);
-                } else {
-                    // No user location, just show all active salons
-                    displaySalonsOnMap(activeSalons);
+                // Calculate distances from user location
+                const salonsWithDistance = activeSalons.map(salon => {
+                    const distance = calculateDistance(
+                        userLatitude, 
+                        userLongitude, 
+                        parseFloat(salon.latitude), 
+                        parseFloat(salon.longitude)
+                    );
+                    return {
+                        ...salon,
+                        dist_meters: distance * 1000,
+                        dist_km: distance
+                    };
+                }).sort((a, b) => a.dist_km - b.dist_km);
+                
+                console.log('Nearby salons after distance calculation:', salonsWithDistance.length);
+                
+                if (salonsWithDistance.length === 0) {
+                    showToast('No salons found nearby', 'info');
+                    showLoading(false);
+                    return;
                 }
+                
+                displaySalonsOnMap(salonsWithDistance);
+                hasSearchedSalons = true;
+                
+                // Show success message
+                showToast(`Found ${salonsWithDistance.length} salons nearby`, 'success');
                 
             } catch (error) {
                 console.error('Error searching salons:', error);
                 showToast('Error searching for salons: ' + error.message, 'error');
             } finally {
                 showLoading(false);
+                loadingText.textContent = 'Finding nearby salons...';
             }
         }
 
@@ -1138,7 +1204,6 @@
                             <i class="fas fa-star"></i> ${salon.rating || '4.5'}
                         </div>
                         <p style="font-size: 11px; color: #666; margin: 5px 0;">${salon.address || 'Address not available'}</p>
-                        <p style="font-size: 10px; color: #999; margin: 3px 0;">Status: ${salon.status || 'unknown'}</p>
                         <button class="btn btn-primary btn-sm popup-button" onclick="openBookingPanel('${salon.id}')">
                             <i class="fas fa-calendar-plus me-1"></i>Book Now
                         </button>
@@ -1152,11 +1217,11 @@
                 salonMarkers.push(marker);
             });
             
-            const message = showAll ? 
-                `Found ${salons.length} salons (including inactive)` : 
-                `Found ${salons.length} salons nearby`;
-            
-            showToast(message, 'success');
+            // Fit map to show all markers
+            if (salonMarkers.length > 0) {
+                const group = new L.featureGroup(salonMarkers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
         }
 
         // Show/hide loading overlay
@@ -1184,6 +1249,34 @@
                 map.setView([userLatitude, userLongitude], 15);
                 userMarker.openPopup();
             }
+        }
+
+        // Show welcome message
+        function showWelcomeMessage() {
+            if (!hasWelcomeShown) {
+                welcomeMessage.style.display = 'block';
+                hasWelcomeShown = true;
+            }
+        }
+
+        // Hide welcome message
+        function hideWelcomeMessage() {
+            welcomeMessage.style.display = 'none';
+        }
+
+        // Show search instructions
+        function showSearchInstructions() {
+            searchInstructions.style.display = 'block';
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                searchInstructions.style.display = 'none';
+            }, 10000);
+        }
+
+        // Hide search instructions
+        function hideSearchInstructions() {
+            searchInstructions.style.display = 'none';
         }
 
         // Open booking panel
@@ -1416,13 +1509,14 @@
                 // Re-initialize map with new location
                 initializeMap(location.latitude, location.longitude);
                 
-                // Re-search salons if they were already loaded
-                if (salonMarkers.length > 0) {
+                // Auto-search salons if user had previously searched
+                if (hasSearchedSalons) {
                     loadingText.textContent = 'Updating nearby salons...';
                     await searchNearbySalons();
                 }
                 
                 showToast('Location updated successfully', 'success');
+                hideWelcomeMessage();
             } catch (error) {
                 console.error('Error refreshing location:', error);
                 showToast('Error updating location', 'error');
@@ -1430,6 +1524,31 @@
                 showLoading(false);
                 loadingText.textContent = 'Finding nearby salons...';
             }
+        }
+
+        // Get location from welcome message
+        async function getLocationFromWelcome() {
+            hideWelcomeMessage();
+            await refreshLocation();
+            
+            // Show search instructions after getting location
+            setTimeout(() => {
+                showSearchInstructions();
+            }, 1000);
+        }
+
+        // Skip location from welcome message
+        function skipLocationFromWelcome() {
+            hideWelcomeMessage();
+            
+            // Initialize with default location
+            initializeMap(userLatitude, userLongitude);
+            showToast('You can still search salons or get your location later', 'info');
+            
+            // Show search instructions
+            setTimeout(() => {
+                showSearchInstructions();
+            }, 1000);
         }
 
         // Initialize the application
@@ -1444,21 +1563,21 @@
                 
                 loadMarquee();
                 
-                // Get location first
-                loadingText.textContent = 'Getting your location...';
-                const location = await getCurrentLocation();
+                // Get default location first (but don't search salons)
+                loadingText.textContent = 'Setting up map...';
+                const location = await useDefaultLocation('Initial setup');
                 
                 // Update UI with location
                 locationText.textContent = currentAddress;
                 
-                // Initialize map with location
+                // Initialize map with default location
                 initializeMap(userLatitude, userLongitude);
                 
                 console.log('Application initialized successfully');
                 
-                // Auto-search for salons after initialization
-                setTimeout(async () => {
-                    await searchNearbySalons();
+                // Show welcome message
+                setTimeout(() => {
+                    showWelcomeMessage();
                 }, 500);
                 
             } catch (error) {
@@ -1475,9 +1594,11 @@
             console.log('DOM loaded, initializing app...');
             init();
             
+            // Search salons button - ONLY searches when clicked
             searchSalonsBtn.addEventListener('click', async function() {
                 console.log('Search salons button clicked');
                 await searchNearbySalons();
+                hideSearchInstructions();
             });
             
             currentLocationBtn.addEventListener('click', async function() {
@@ -1487,6 +1608,28 @@
             currentLocationLink.addEventListener('click', async function(e) {
                 e.preventDefault();
                 await refreshLocation();
+            });
+            
+            // Welcome message buttons
+            getLocationBtn.addEventListener('click', getLocationFromWelcome);
+            skipLocationBtn.addEventListener('click', skipLocationFromWelcome);
+            gotItBtn.addEventListener('click', hideSearchInstructions);
+            
+            // Show search instructions when hovering over search button
+            searchSalonsBtn.addEventListener('mouseenter', function() {
+                if (!hasSearchedSalons) {
+                    showSearchInstructions();
+                }
+            });
+            
+            searchInstructions.addEventListener('mouseenter', function() {
+                clearTimeout(this.hideTimeout);
+            });
+            
+            searchInstructions.addEventListener('mouseleave', function() {
+                this.hideTimeout = setTimeout(() => {
+                    hideSearchInstructions();
+                }, 1000);
             });
             
             document.getElementById('closeBookingPanel').addEventListener('click', closeBookingPanel);
