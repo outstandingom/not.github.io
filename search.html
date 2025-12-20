@@ -1509,12 +1509,7 @@
                 // Re-initialize map with new location
                 initializeMap(location.latitude, location.longitude);
                 
-                // Auto-search salons if user had previously searched
-                if (hasSearchedSalons) {
-                    loadingText.textContent = 'Updating nearby salons...';
-                    await searchNearbySalons();
-                }
-                
+                // DO NOT auto-search salons here
                 showToast('Location updated successfully', 'success');
                 hideWelcomeMessage();
             } catch (error) {
@@ -1551,7 +1546,7 @@
             }, 1000);
         }
 
-        // Initialize the application
+        // Initialize the application - NO AUTO-SEARCH
         async function init() {
             console.log('Initializing application...');
             showLoading(true);
