@@ -477,54 +477,6 @@
                 right: -500px;
             }
         }
-        
-        .location-accuracy {
-            font-size: 11px;
-            color: #666;
-            margin-left: 5px;
-            font-style: italic;
-        }
-        
-        .welcome-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            z-index: 1000;
-            max-width: 90%;
-            width: 400px;
-            display: none;
-        }
-        
-        .welcome-icon {
-            font-size: 48px;
-            color: var(--secondary);
-            margin-bottom: 15px;
-        }
-        
-        .search-instructions {
-            position: absolute;
-            bottom: 200px;
-            right: 15px;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            z-index: 1000;
-            max-width: 250px;
-            display: none;
-        }
-        
-        .search-instructions i {
-            color: var(--secondary);
-            font-size: 20px;
-            margin-bottom: 10px;
-        }
     </style>
 </head>
 <body>
@@ -534,32 +486,6 @@
     <!-- Overlay for booking panel -->
     <div class="overlay" id="bookingOverlay"></div>
 
-    <!-- Welcome Message -->
-    <div class="welcome-message" id="welcomeMessage">
-        <div class="welcome-icon">
-            <i class="fas fa-map-marker-alt"></i>
-        </div>
-        <h4>Welcome to SevaOnTime!</h4>
-        <p class="text-muted">Get your current location to find nearby salons.</p>
-        <p class="text-muted mb-3">Click the location button below or use the search button to find salons near you.</p>
-        <div class="d-flex justify-content-center gap-2">
-            <button class="btn btn-primary" id="getLocationBtn">
-                <i class="fas fa-location-arrow me-1"></i> Get My Location
-            </button>
-            <button class="btn btn-outline-secondary" id="skipLocationBtn">
-                Skip for Now
-            </button>
-        </div>
-    </div>
-
-    <!-- Search Instructions -->
-    <div class="search-instructions" id="searchInstructions">
-        <i class="fas fa-search"></i>
-        <h6>Search Nearby Salons</h6>
-        <p class="text-muted small">Click this button to find salons near your current location</p>
-        <button class="btn btn-sm btn-primary w-100" id="gotItBtn">Got it!</button>
-    </div>
-
     <!-- Header -->
     <div class="header">
         <div class="container">
@@ -568,7 +494,6 @@
                 <a href="#" class="location-link" id="currentLocationLink">
                     <i class="fas fa-map-marker-alt me-1"></i>
                     <span id="locationText">Getting location...</span>
-                    <span id="locationAccuracy" class="location-accuracy"></span>
                 </a>
             </div>
         </div>
@@ -763,27 +688,17 @@
         let selectedDate = null;
         let selectedTime = null;
         let selectedServices = [];
-        let availableTimeSlots = [];
-        let existingBookings = [];
         let currentUser = null;
-        let isUsingDefaultLocation = false;
         let hasSearchedSalons = false;
-        let hasWelcomeShown = false;
 
         // DOM elements
         const locationText = document.getElementById('locationText');
-        const locationAccuracy = document.getElementById('locationAccuracy');
         const currentLocationLink = document.getElementById('currentLocationLink');
         const currentLocationBtn = document.getElementById('currentLocationBtn');
         const searchSalonsBtn = document.getElementById('searchSalonsBtn');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
         const marqueeContent = document.getElementById('marqueeContent');
-        const welcomeMessage = document.getElementById('welcomeMessage');
-        const searchInstructions = document.getElementById('searchInstructions');
-        const getLocationBtn = document.getElementById('getLocationBtn');
-        const skipLocationBtn = document.getElementById('skipLocationBtn');
-        const gotItBtn = document.getElementById('gotItBtn');
 
         // Demo salon images
         const demoSalonImages = [
@@ -868,37 +783,41 @@
             
             const userIcon = L.divIcon({
                 className: 'user-location-marker',
-                html: isUsingDefaultLocation ? 
-                    '<div style="background-color: #ff6b6b; color: white; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 8px rgba(255,107,107,0.5);">!</div>' :
-                    '<div style="background-color: #007bff; color: white; border-radius: 50%; width: 16px; height: 16px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,123,255,0.5);"></div>',
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
             });
             
             userMarker = L.marker([lat, lng], { icon: userIcon })
                 .addTo(map)
-                .bindPopup(isUsingDefaultLocation ? 'Default Location (Allow location access)' : 'Your Current Location')
+                .bindPopup('Your Current Location')
                 .openPopup();
                 
             console.log('Map initialized successfully');
         }
 
-        // IMPROVED: Get user's current location with better error handling
+        // SIMPLE and RELIABLE: Get user's current location using coordinates only
         function getCurrentLocation() {
             return new Promise((resolve, reject) => {
                 console.log('Getting current location...');
                 
-                // First check if browser supports geolocation
                 if (!navigator.geolocation) {
                     console.warn('Geolocation not supported by browser');
-                    useDefaultLocation('Browser does not support geolocation').then(resolve).catch(reject);
+                    // Default to Bhopal coordinates
+                    userLatitude = 23.2599;
+                    userLongitude = 77.4126;
+                    currentAddress = "Bhopal, MP";
+                    locationText.textContent = currentAddress;
+                    resolve({ 
+                        latitude: userLatitude, 
+                        longitude: userLongitude,
+                        address: currentAddress
+                    });
                     return;
                 }
                 
                 // Set loading state
                 loadingText.textContent = 'Getting your location...';
                 
-                // Try to get high accuracy location first
                 navigator.geolocation.getCurrentPosition(
                     async (position) => {
                         console.log('Geolocation success:', position);
@@ -906,131 +825,41 @@
                         userLongitude = position.coords.longitude;
                         const accuracy = position.coords.accuracy;
                         
-                        console.log('Location obtained:', userLatitude, userLongitude, 'Accuracy:', accuracy, 'meters');
+                        console.log('Location obtained:', userLatitude, userLongitude);
                         
-                        // Show accuracy in UI
-                        if (accuracy > 100) {
-                            locationAccuracy.textContent = `(±${Math.round(accuracy)}m)`;
-                            locationAccuracy.style.color = '#ff6b6b';
-                        } else {
-                            locationAccuracy.textContent = `(±${Math.round(accuracy)}m)`;
-                            locationAccuracy.style.color = '#28a745';
-                        }
+                        // SIMPLE: Just show coordinates or a simple message
+                        // Don't use reverse geocoding which causes "Pandaria" issue
+                        currentAddress = `Location: ${userLatitude.toFixed(4)}, ${userLongitude.toFixed(4)}`;
+                        locationText.textContent = currentAddress;
                         
-                        isUsingDefaultLocation = false;
-                        
-                        try {
-                            // Get address from coordinates
-                            const address = await getAddressFromCoordinates(userLatitude, userLongitude);
-                            currentAddress = address;
-                            locationText.textContent = currentAddress;
-                            
-                            resolve({ 
-                                latitude: userLatitude, 
-                                longitude: userLongitude,
-                                address: currentAddress,
-                                accuracy: accuracy,
-                                isAccurate: accuracy < 100
-                            });
-                        } catch (addressError) {
-                            console.error('Error getting address:', addressError);
-                            currentAddress = `Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}`;
-                            locationText.textContent = currentAddress;
-                            
-                            resolve({ 
-                                latitude: userLatitude, 
-                                longitude: userLongitude,
-                                address: currentAddress,
-                                accuracy: accuracy,
-                                isAccurate: accuracy < 100
-                            });
-                        }
+                        resolve({ 
+                            latitude: userLatitude, 
+                            longitude: userLongitude,
+                            address: currentAddress
+                        });
                     },
-                    async (error) => {
+                    (error) => {
                         console.warn('Geolocation error:', error.code, error.message);
                         
-                        let errorMessage = '';
-                        switch(error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage = 'Location permission denied. Please enable location services.';
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage = 'Location information unavailable.';
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage = 'Location request timed out.';
-                                break;
-                            default:
-                                errorMessage = 'Unknown error getting location.';
-                        }
+                        // Default to Bhopal coordinates
+                        userLatitude = 23.2599;
+                        userLongitude = 77.4126;
+                        currentAddress = "Bhopal, MP";
+                        locationText.textContent = currentAddress;
                         
-                        console.log('Geolocation failed, using default location');
-                        useDefaultLocation(errorMessage).then(resolve).catch(reject);
+                        resolve({ 
+                            latitude: userLatitude, 
+                            longitude: userLongitude,
+                            address: currentAddress
+                        });
                     },
                     {
                         enableHighAccuracy: true,
-                        timeout: 15000,
-                        maximumAge: 60000
+                        timeout: 10000,
+                        maximumAge: 0
                     }
                 );
             });
-        }
-
-        // Fallback to default location
-        async function useDefaultLocation(reason) {
-            console.log('Using default location. Reason:', reason);
-            
-            // Default location (Bhopal coordinates)
-            userLatitude = 23.2599;
-            userLongitude = 77.4126;
-            currentAddress = "Bhopal, Madhya Pradesh";
-            isUsingDefaultLocation = true;
-            
-            // Show warning in UI
-            locationAccuracy.textContent = '(Default location)';
-            locationAccuracy.style.color = '#ff6b6b';
-            locationText.textContent = currentAddress;
-            
-            return { 
-                latitude: userLatitude, 
-                longitude: userLongitude,
-                address: currentAddress,
-                accuracy: null,
-                isAccurate: false,
-                isDefault: true
-            };
-        }
-
-        // Get address from coordinates using reverse geocoding
-        async function getAddressFromCoordinates(lat, lng) {
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
-                );
-                
-                if (!response.ok) {
-                    throw new Error('Reverse geocoding failed');
-                }
-                
-                const data = await response.json();
-                
-                if (data.display_name) {
-                    // Extract city/town name or use full address
-                    const address = data.address || {};
-                    if (address.city || address.town || address.village) {
-                        return address.city || address.town || address.village;
-                    } else if (data.display_name) {
-                        // Get first two parts of the address
-                        const parts = data.display_name.split(',');
-                        return parts.slice(0, Math.min(2, parts.length)).join(',');
-                    }
-                }
-                
-                return `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
-            } catch (error) {
-                console.error('Reverse geocoding error:', error);
-                throw error;
-            }
         }
 
         // Load marquee advertisements
@@ -1057,7 +886,8 @@
             // Check if user has location
             if (!userLatitude || !userLongitude) {
                 showToast('Please get your location first', 'error');
-                showWelcomeMessage();
+                // Auto-get location if not available
+                await refreshLocation();
                 return;
             }
             
@@ -1065,11 +895,12 @@
             loadingText.textContent = 'Searching nearby salons...';
             
             try {
-                console.log('Fetching all salons from database...');
+                console.log('Fetching salons from database...');
                 
                 const { data: allSalons, error } = await supabase
                     .from('salons')
-                    .select('*');
+                    .select('*')
+                    .eq('status', 'active');
                 
                 if (error) {
                     console.error('Error fetching salons:', error);
@@ -1078,52 +909,33 @@
                     return;
                 }
                 
-                console.log('ALL salons from database:', allSalons);
-                console.log('Number of salons:', allSalons ? allSalons.length : 0);
+                console.log('Salons from database:', allSalons);
                 
                 if (!allSalons || allSalons.length === 0) {
-                    console.log('No salons found in database at all');
-                    showToast('No salons available yet. Be the first to register!', 'info');
+                    console.log('No salons found in database');
+                    showToast('No salons available yet.', 'info');
                     showLoading(false);
                     return;
                 }
                 
-                // Filter for active salons with coordinates
-                const activeSalons = allSalons.filter(salon => 
-                    salon.status === 'active' && 
-                    salon.latitude && 
-                    salon.longitude
-                );
+                // Filter salons with coordinates and calculate distances
+                const salonsWithDistance = allSalons
+                    .filter(salon => salon.latitude && salon.longitude)
+                    .map(salon => {
+                        const distance = calculateDistance(
+                            userLatitude, 
+                            userLongitude, 
+                            parseFloat(salon.latitude), 
+                            parseFloat(salon.longitude)
+                        );
+                        return {
+                            ...salon,
+                            dist_km: distance
+                        };
+                    })
+                    .sort((a, b) => a.dist_km - b.dist_km);
                 
-                console.log('Active salons with coordinates:', activeSalons.length);
-                
-                if (activeSalons.length === 0) {
-                    console.log('No active salons with coordinates');
-                    
-                    // Show ALL salons anyway for debugging
-                    console.log('Showing ALL salons for debugging...');
-                    displaySalonsOnMap(allSalons, true);
-                    showToast(`Found ${allSalons.length} salons (including inactive)`, 'info');
-                    showLoading(false);
-                    return;
-                }
-                
-                // Calculate distances from user location
-                const salonsWithDistance = activeSalons.map(salon => {
-                    const distance = calculateDistance(
-                        userLatitude, 
-                        userLongitude, 
-                        parseFloat(salon.latitude), 
-                        parseFloat(salon.longitude)
-                    );
-                    return {
-                        ...salon,
-                        dist_meters: distance * 1000,
-                        dist_km: distance
-                    };
-                }).sort((a, b) => a.dist_km - b.dist_km);
-                
-                console.log('Nearby salons after distance calculation:', salonsWithDistance.length);
+                console.log('Nearby salons after calculation:', salonsWithDistance.length);
                 
                 if (salonsWithDistance.length === 0) {
                     showToast('No salons found nearby', 'info');
@@ -1134,7 +946,6 @@
                 displaySalonsOnMap(salonsWithDistance);
                 hasSearchedSalons = true;
                 
-                // Show success message
                 showToast(`Found ${salonsWithDistance.length} salons nearby`, 'success');
                 
             } catch (error) {
@@ -1160,7 +971,7 @@
         }
 
         // Display salons on map
-        function displaySalonsOnMap(salons, showAll = false) {
+        function displaySalonsOnMap(salons) {
             // Clear existing salon markers
             salonMarkers.forEach(marker => marker.remove());
             salonMarkers = [];
@@ -1175,11 +986,7 @@
             // Add salon markers to map
             salons.forEach((salon, index) => {
                 const salonImage = salon.image_url || demoSalonImages[index % demoSalonImages.length];
-                let distanceKm = 'N/A';
-                
-                if (salon.dist_km) {
-                    distanceKm = salon.dist_km.toFixed(1);
-                }
+                const distanceKm = salon.dist_km ? salon.dist_km.toFixed(1) : 'N/A';
                 
                 // Create custom icon for salon
                 const salonIcon = L.divIcon({
@@ -1249,34 +1056,6 @@
                 map.setView([userLatitude, userLongitude], 15);
                 userMarker.openPopup();
             }
-        }
-
-        // Show welcome message
-        function showWelcomeMessage() {
-            if (!hasWelcomeShown) {
-                welcomeMessage.style.display = 'block';
-                hasWelcomeShown = true;
-            }
-        }
-
-        // Hide welcome message
-        function hideWelcomeMessage() {
-            welcomeMessage.style.display = 'none';
-        }
-
-        // Show search instructions
-        function showSearchInstructions() {
-            searchInstructions.style.display = 'block';
-            
-            // Auto-hide after 10 seconds
-            setTimeout(() => {
-                searchInstructions.style.display = 'none';
-            }, 10000);
-        }
-
-        // Hide search instructions
-        function hideSearchInstructions() {
-            searchInstructions.style.display = 'none';
         }
 
         // Open booking panel
@@ -1498,10 +1277,10 @@
             }
         }
 
-        // Refresh location with better UX
+        // Refresh location
         async function refreshLocation() {
             showLoading(true);
-            loadingText.textContent = 'Updating your location...';
+            loadingText.textContent = 'Getting your location...';
             
             try {
                 const location = await getCurrentLocation();
@@ -1509,9 +1288,7 @@
                 // Re-initialize map with new location
                 initializeMap(location.latitude, location.longitude);
                 
-                // DO NOT auto-search salons here
                 showToast('Location updated successfully', 'success');
-                hideWelcomeMessage();
             } catch (error) {
                 console.error('Error refreshing location:', error);
                 showToast('Error updating location', 'error');
@@ -1519,31 +1296,6 @@
                 showLoading(false);
                 loadingText.textContent = 'Finding nearby salons...';
             }
-        }
-
-        // Get location from welcome message
-        async function getLocationFromWelcome() {
-            hideWelcomeMessage();
-            await refreshLocation();
-            
-            // Show search instructions after getting location
-            setTimeout(() => {
-                showSearchInstructions();
-            }, 1000);
-        }
-
-        // Skip location from welcome message
-        function skipLocationFromWelcome() {
-            hideWelcomeMessage();
-            
-            // Initialize with default location
-            initializeMap(userLatitude, userLongitude);
-            showToast('You can still search salons or get your location later', 'info');
-            
-            // Show search instructions
-            setTimeout(() => {
-                showSearchInstructions();
-            }, 1000);
         }
 
         // Initialize the application - NO AUTO-SEARCH
@@ -1558,22 +1310,14 @@
                 
                 loadMarquee();
                 
-                // Get default location first (but don't search salons)
-                loadingText.textContent = 'Setting up map...';
-                const location = await useDefaultLocation('Initial setup');
+                // Get location on page load
+                loadingText.textContent = 'Getting your location...';
+                const location = await getCurrentLocation();
                 
-                // Update UI with location
-                locationText.textContent = currentAddress;
-                
-                // Initialize map with default location
-                initializeMap(userLatitude, userLongitude);
+                // Initialize map with location
+                initializeMap(location.latitude, location.longitude);
                 
                 console.log('Application initialized successfully');
-                
-                // Show welcome message
-                setTimeout(() => {
-                    showWelcomeMessage();
-                }, 500);
                 
             } catch (error) {
                 console.error('Error initializing application:', error);
@@ -1593,7 +1337,6 @@
             searchSalonsBtn.addEventListener('click', async function() {
                 console.log('Search salons button clicked');
                 await searchNearbySalons();
-                hideSearchInstructions();
             });
             
             currentLocationBtn.addEventListener('click', async function() {
@@ -1605,32 +1348,9 @@
                 await refreshLocation();
             });
             
-            // Welcome message buttons
-            getLocationBtn.addEventListener('click', getLocationFromWelcome);
-            skipLocationBtn.addEventListener('click', skipLocationFromWelcome);
-            gotItBtn.addEventListener('click', hideSearchInstructions);
-            
-            // Show search instructions when hovering over search button
-            searchSalonsBtn.addEventListener('mouseenter', function() {
-                if (!hasSearchedSalons) {
-                    showSearchInstructions();
-                }
-            });
-            
-            searchInstructions.addEventListener('mouseenter', function() {
-                clearTimeout(this.hideTimeout);
-            });
-            
-            searchInstructions.addEventListener('mouseleave', function() {
-                this.hideTimeout = setTimeout(() => {
-                    hideSearchInstructions();
-                }, 1000);
-            });
-            
             document.getElementById('closeBookingPanel').addEventListener('click', closeBookingPanel);
             document.getElementById('bookingOverlay').addEventListener('click', closeBookingPanel);
             
-            // ... rest of your event listeners remain the same ...
             document.getElementById('nextToStep2').addEventListener('click', function() {
                 if (!selectedBarber) {
                     showToast('Please select a barber', 'error');
@@ -1755,7 +1475,6 @@
                     
                     setTimeout(() => {
                         closeBookingPanel();
-                        // Redirect to bookings page
                         window.location.href = 'bookings.html';
                     }, 2000);
                     
