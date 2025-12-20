@@ -625,7 +625,7 @@
                     <small class="text-muted">This UTR will only be visible to you and the selected barber</small>
                 </div>
                 
-                .form-group {
+                <div class="form-group">
                     <label class="form-label">Special Instructions (Optional)</label>
                     <textarea class="form-control" id="specialInstructions" rows="3"></textarea>
                 </div>
@@ -798,7 +798,6 @@
                 console.log('Getting current location...');
                 if (!navigator.geolocation) {
                     console.error('Geolocation not supported');
-                    // Use default location
                     userLatitude = 23.2599;
                     userLongitude = 77.4126;
                     currentAddress = "Bhopal, Madhya Pradesh";
@@ -882,9 +881,9 @@
             });
         }
 
-        // Search nearby salons using PostGIS function
+        // Search nearby salons - FIXED VERSION
         async function searchNearbySalons() {
-            console.log('Searching nearby salons with PostGIS...');
+            console.log('Searching nearby salons...');
             if (!userLatitude || !userLongitude) {
                 console.error('User location not available');
                 showToast('Please enable location services first', 'error');
@@ -894,66 +893,77 @@
             showLoading(true);
             
             try {
-                console.log('Calling PostGIS function with coordinates:', userLatitude, userLongitude);
+                console.log('Searching salons with user location:', userLatitude, userLongitude);
                 
-                // Call the PostGIS function
-                const { data: salons, error } = await supabase
-                    .rpc('nearby_salons', {
-                        user_lat: userLatitude,
-                        user_long: userLongitude,
-                        max_dist: 10000  // 10 km in meters
-                    });
+                // FIRST: Try to use the PostGIS function if it exists
+                try {
+                    const { data: salons, error } = await supabase
+                        .rpc('nearby_salons', {
+                            user_lat: userLatitude,
+                            user_long: userLongitude,
+                            max_dist: 10000  // 10 km in meters
+                        });
 
-                if (error) {
-                    console.error('Supabase RPC error:', error);
-                    // Try alternative query if PostGIS function fails
-                    console.log('Trying alternative query...');
-                    const { data: allSalons, error: salonsError } = await supabase
-                        .from('salons')
-                        .select('*')
-                        .eq('is_active', true)
-                        .limit(50);
-                    
-                    if (salonsError) {
-                        throw salonsError;
-                    }
-                    
-                    if (!allSalons || allSalons.length === 0) {
-                        showToast('No salons found in database', 'error');
+                    if (!error && salons && salons.length > 0) {
+                        console.log('Salons found via PostGIS:', salons.length);
+                        displaySalonsOnMap(salons);
                         showLoading(false);
                         return;
                     }
-                    
-                    // Calculate distances manually
-                    const salonsWithDistance = allSalons.map(salon => {
-                        const distance = calculateDistance(
-                            userLatitude, 
-                            userLongitude, 
-                            salon.latitude, 
-                            salon.longitude
-                        );
-                        return {
-                            ...salon,
-                            dist_meters: distance * 1000,
-                            dist_km: distance
-                        };
-                    }).filter(salon => salon.dist_km <= 10)
-                      .sort((a, b) => a.dist_km - b.dist_km);
-                    
-                    displaySalonsOnMap(salonsWithDistance);
+                } catch (postgisError) {
+                    console.log('PostGIS function not available or no results:', postgisError);
+                }
+                
+                // SECOND: Fallback to direct SQL query
+                console.log('Using fallback SQL query...');
+                
+                // Get ALL active salons with coordinates
+                const { data: allSalons, error: salonsError } = await supabase
+                    .from('salons')
+                    .select('*')
+                    .eq('status', 'active')  // Only active salons
+                    .not('latitude', 'is', null)  // Only salons with coordinates
+                    .not('longitude', 'is', null);
+
+                if (salonsError) {
+                    console.error('Error fetching salons:', salonsError);
+                    throw salonsError;
+                }
+                
+                console.log('All salons from database:', allSalons ? allSalons.length : 0);
+                
+                if (!allSalons || allSalons.length === 0) {
+                    console.log('No salons found in database');
+                    showToast('No salons available in your area yet', 'error');
+                    showLoading(false);
                     return;
                 }
                 
-                console.log('Salons found via PostGIS:', salons ? salons.length : 0);
+                // Calculate distance for each salon and filter by 10km radius
+                const salonsWithDistance = allSalons.map(salon => {
+                    const distance = calculateDistance(
+                        userLatitude, 
+                        userLongitude, 
+                        parseFloat(salon.latitude), 
+                        parseFloat(salon.longitude)
+                    );
+                    return {
+                        ...salon,
+                        dist_meters: distance * 1000,
+                        dist_km: distance
+                    };
+                }).filter(salon => salon.dist_km <= 10)  // Only show within 10km
+                  .sort((a, b) => a.dist_km - b.dist_km);
                 
-                if (!salons || salons.length === 0) {
-                    console.log('No salons found via PostGIS function');
+                console.log('Nearby salons after filtering:', salonsWithDistance.length);
+                
+                if (salonsWithDistance.length === 0) {
                     showToast('No salons found within 10km radius', 'error');
                     showLoading(false);
                     return;
                 }
                 
-                displaySalonsOnMap(salons);
+                displaySalonsOnMap(salonsWithDistance);
                 
             } catch (error) {
                 console.error('Error searching salons:', error);
@@ -984,7 +994,7 @@
             
             // Add salon markers to map
             salons.forEach((salon, index) => {
-                const salonImage = salon.salon_image || demoSalonImages[index % demoSalonImages.length];
+                const salonImage = salon.image_url || demoSalonImages[index % demoSalonImages.length];
                 const distanceKm = (salon.dist_meters / 1000).toFixed(1);
                 
                 // Create custom icon for salon
@@ -1001,7 +1011,7 @@
                     .addTo(map)
                     .bindPopup(`
                         <div class="salon-popup">
-                            <img src="${salonImage}" alt="${salon.name}">
+                            <img src="${salonImage}" alt="${salon.name}" loading="lazy">
                             <div class="popup-title">${salon.name}</div>
                             <div class="popup-distance">
                                 <i class="fas fa-map-marker-alt me-1"></i>${distanceKm} km away
