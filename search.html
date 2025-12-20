@@ -8,7 +8,1467 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SevaOnTime | Nearby Salons</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --primary: #000;
+            --secondary: #8a6d3b;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            padding-bottom: 70px; /* Added for bottom nav */
+        }
+        
+        .header {
+            background: white;
+            padding: 15px 0;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .logo span {
+            color: var(--secondary);
+        }
+        
+        .location-link {
+            font-size: 14px;
+            color: #007bff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .location-link:hover {
+            text-decoration: underline;
+        }
+        
+        .ad-marquee {
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffeaa7);
+            padding: 8px 0;
+            overflow: hidden;
+            height: 40px;
+        }
+        
+        .marquee-content {
+            display: flex;
+            animation: marquee 20s linear infinite;
+            white-space: nowrap;
+        }
+        
+        .marquee-text {
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 0 30px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .marquee-text i {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        #map {
+            height: calc(100vh - 200px); /* Adjusted for bottom nav */
+            width: 100%;
+            z-index: 1;
+        }
+        
+        /* FIXED: Added dot (.) before bottom-nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #777;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+            padding: 5px 10px;
+            border-radius: 8px;
+            flex: 1;
+            max-width: 25%;
+        }
+        
+        .nav-item.active {
+            color: var(--secondary, #8a6d3b);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 3px;
+        }
+        
+        .nav-item:hover {
+            color: var(--secondary, #8a6d3b);
+            background-color: rgba(138, 109, 59, 0.05);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .salon-popup {
+            max-width: 250px;
+        }
+        
+        .salon-popup img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .popup-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .popup-distance {
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .popup-rating {
+            color: #ffc107;
+            font-size: 12px;
+        }
+        
+        .popup-button {
+            width: 100%;
+            margin-top: 8px;
+            font-size: 12px;
+            padding: 6px 12px;
+        }
+        
+        .user-location-marker {
+            background: #007bff;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.5);
+        }
+        
+        .current-location-btn {
+            position: absolute;
+            bottom: 90px; /* Adjusted for bottom nav */
+            right: 15px;
+            z-index: 1000;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+        
+        .search-salons-btn {
+            position: absolute;
+            bottom: 145px; /* Adjusted for bottom nav */
+            right: 15px;
+            z-index: 1000;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        /* Booking Panel Styles */
+        .booking-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            z-index: 1100;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        }
+        
+        .booking-panel.active {
+            right: 0;
+        }
+        
+        .booking-header {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .booking-content {
+            padding: 20px;
+        }
+        
+        .barber-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .barber-card:hover {
+            border-color: var(--secondary);
+        }
+        
+        .barber-card.selected {
+            border-color: var(--secondary);
+            background-color: rgba(138, 109, 59, 0.05);
+        }
+        
+        .barber-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        
+        .time-slot {
+            display: inline-block;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .time-slot:hover {
+            border-color: var(--secondary);
+        }
+        
+        .time-slot.selected {
+            background-color: var(--secondary);
+            color: white;
+            border-color: var(--secondary);
+        }
+        
+        .time-slot.booked {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1099;
+            display: none;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        .booking-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .booking-steps:before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #e0e0e0;
+            z-index: 1;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .step.active .step-number {
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        .step-label {
+            font-size: 0.8rem;
+            color: #777;
+        }
+        
+        .step.active .step-label {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .step-content {
+            display: none;
+        }
+        
+        .step-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        
+        .form-control:read-only {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+        
+        .service-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .service-checkbox:hover {
+            border-color: var(--secondary);
+        }
+        
+        .service-checkbox.selected {
+            border-color: var(--secondary);
+            background-color: rgba(138, 109, 59, 0.05);
+        }
+        
+        .service-checkbox input {
+            margin-right: 10px;
+        }
+        
+        .service-info {
+            flex-grow: 1;
+        }
+        
+        .service-duration {
+            font-size: 0.8rem;
+            color: #777;
+        }
+        
+        .service-price-display {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+        
+        .toast {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-left: 4px solid #28a745;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .toast.error {
+            border-left-color: #ff6b6b;
+        }
+
+        @media (min-width: 768px) {
+            .booking-panel {
+                width: 500px;
+                right: -500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Overlay for booking panel -->
+    <div class="overlay" id="bookingOverlay"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="#" class="logo">SevaOn<span>Time</span></a>
+                <a href="#" class="location-link" id="currentLocationLink">
+                    <i class="fas fa-map-marker-alt me-1"></i>
+                    <span id="locationText">Getting location...</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advertisement Marquee -->
+    <div class="ad-marquee">
+        <div class="marquee-content" id="marqueeContent">
+            <!-- Marquee content will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Map Container -->
+    <div id="map"></div>
+
+    <!-- Search Salons Button -->
+    <div class="search-salons-btn" id="searchSalonsBtn" title="Search Nearby Salons">
+        <i class="fas fa-search"></i>
+    </div>
+
+    <!-- Current Location Button -->
+    <div class="current-location-btn" id="currentLocationBtn" title="Current Location">
+        <i class="fas fa-location-arrow text-primary"></i>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Finding nearby salons...</p>
+        </div>
+    </div>
+
+    <!-- Booking Panel -->
+    <div class="booking-panel" id="bookingPanel">
+        <div class="booking-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Book Appointment</h4>
+                <button type="button" class="btn-close" id="closeBookingPanel"></button>
+            </div>
+        </div>
+        
+        <div class="booking-content">
+            <div class="booking-steps">
+                <div class="step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Select Barber</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Select Services</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Select Time</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Your Details</div>
+                </div>
+            </div>
+            
+            <div id="step1" class="step-content active">
+                <h5>Select a Barber</h5>
+                <p class="text-muted mb-3">Choose your preferred barber</p>
+                <div id="barbersList"></div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline" disabled>Previous</button>
+                    <button type="button" class="btn btn-primary" id="nextToStep2">Next</button>
+                </div>
+            </div>
+            
+            <div id="step2" class="step-content">
+                <h5>Select Services</h5>
+                <p class="text-muted mb-3">Choose the services you want (max 10)</p>
+                <div id="servicesList"></div>
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline" id="backToStep1">Previous</button>
+                    <button type="button" class="btn btn-primary" id="nextToStep3">Next</button>
+                </div>
+            </div>
+            
+            <div id="step3" class="step-content">
+                <h5>Select Date & Time</h5>
+                <p class="text-muted mb-3">Choose your preferred date and time slot</p>
+                
+                <div class="form-group">
+                    <label class="form-label">Select Date</label>
+                    <input type="date" class="form-control" id="bookingDate" min="">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Available Time Slots</label>
+                    <div id="timeSlots"></div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline" id="backToStep2">Previous</button>
+                    <button type="button" class="btn btn-primary" id="nextToStep4">Next</button>
+                </div>
+            </div>
+            
+            <div id="step4" class="step-content">
+                <h5>Your Details</h5>
+                <p class="text-muted mb-3">Your name and phone number are fetched from your profile</p>
+                
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" class="form-control" id="customerName" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Phone Number *</label>
+                    <input type="tel" class="form-control" id="customerPhone" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email (Optional)</label>
+                    <input type="email" class="form-control" id="customerEmail">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">UPI ID *</label>
+                    <input type="text" class="form-control" id="upi_id" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">UTR Number (Advance Payment Proof) *</label>
+                    <input type="text" class="form-control" id="customerUTR" required>
+                    <small class="text-muted">This UTR will only be visible to you and the selected barber</small>
+                </div>
+                
+                .form-group {
+                    <label class="form-label">Special Instructions (Optional)</label>
+                    <textarea class="form-control" id="specialInstructions" rows="3"></textarea>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline" id="backToStep3">Previous</button>
+                    <button type="button" class="btn btn-primary" id="confirmBooking">Confirm Booking</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation - MOVED TO CORRECT POSITION -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="ipp.html" class="nav-item active">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+        <a href="bookings.html" class="nav-item">
+            <i class="fas fa-calendar"></i>
+            <span>Bookings</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+            <i class="fas fa-user"></i>
+            <span>Salons</span>
+        </a>
+    </nav>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://bdsveayfvgnluxajbwio.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc3ZlYXlmdmdubHV4YWpid2lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzNDczMzIsImV4cCI6MjA3MzkyMzMzMn0.HHSFl6zkRmk2KuBZPrZsgrJ2C0xUu8McQCWvDFzNhgw';
+
+        // Initialize Supabase
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log('Supabase initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize Supabase:', error);
+        }
+
+        // Global variables
+        let userLatitude = null;
+        let userLongitude = null;
+        let map = null;
+        let userMarker = null;
+        let salonMarkers = [];
+        let currentAddress = "Getting location...";
+        let currentSalonId = null;
+        let currentSalon = null;
+        let selectedBarber = null;
+        let selectedDate = null;
+        let selectedTime = null;
+        let selectedServices = [];
+        let availableTimeSlots = [];
+        let existingBookings = [];
+        let currentUser = null;
+
+        // DOM elements
+        const locationText = document.getElementById('locationText');
+        const currentLocationLink = document.getElementById('currentLocationLink');
+        const currentLocationBtn = document.getElementById('currentLocationBtn');
+        const searchSalonsBtn = document.getElementById('searchSalonsBtn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const marqueeContent = document.getElementById('marqueeContent');
+
+        // Demo salon images
+        const demoSalonImages = [
+            'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=300&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1631729371254-42c2892fbc16?w=300&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300&h=200&fit=crop',
+            'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=300&h=200&fit=crop'
+        ];
+
+        // Marquee advertisements
+        const marqueeAds = [
+            { icon: 'fas fa-tag', text: '50% OFF on First Haircut' },
+            { icon: 'fas fa-gift', text: 'Free Beard Styling with Haircut' },
+            { icon: 'fas fa-star', text: 'Premium Services Available' },
+            { icon: 'fas fa-clock', text: 'Open Till 10 PM Today' },
+            { icon: 'fas fa-bolt', text: 'Quick Service Guaranteed' }
+        ];
+
+        // Function to check if user is logged in and get user data
+        async function checkUserLogin() {
+            try {
+                console.log('Checking user login...');
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    console.error('Session error:', sessionError);
+                    throw sessionError;
+                }
+                
+                if (!session) {
+                    console.log('No session found, redirecting to login');
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                console.log('User session found:', session.user.email);
+                
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('auth_uid', session.user.id)
+                    .single();
+                
+                if (userError) {
+                    console.error('User data error:', userError);
+                    throw userError;
+                }
+                
+                console.log('User data loaded:', userData);
+                
+                return {
+                    session: session,
+                    user: session.user,
+                    userData: userData
+                };
+                
+            } catch (error) {
+                console.error('Error checking user login:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+
+        // Initialize map
+        function initializeMap(lat, lng) {
+            console.log('Initializing map at:', lat, lng);
+            if (map) {
+                map.remove();
+            }
+            
+            map = L.map('map').setView([lat, lng], 15);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Add user location marker
+            if (userMarker) {
+                userMarker.remove();
+            }
+            
+            const userIcon = L.divIcon({
+                className: 'user-location-marker',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            
+            userMarker = L.marker([lat, lng], { icon: userIcon })
+                .addTo(map)
+                .bindPopup('Your Current Location')
+                .openPopup();
+                
+            console.log('Map initialized successfully');
+        }
+
+        // Get user's current location
+        function getCurrentLocation() {
+            return new Promise((resolve, reject) => {
+                console.log('Getting current location...');
+                if (!navigator.geolocation) {
+                    console.error('Geolocation not supported');
+                    // Use default location
+                    userLatitude = 23.2599;
+                    userLongitude = 77.4126;
+                    currentAddress = "Bhopal, Madhya Pradesh";
+                    console.log('Using default location:', userLatitude, userLongitude);
+                    resolve({ 
+                        latitude: userLatitude, 
+                        longitude: userLongitude,
+                        address: currentAddress
+                    });
+                    return;
+                }
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLatitude = position.coords.latitude;
+                        userLongitude = position.coords.longitude;
+                        console.log('Location obtained:', userLatitude, userLongitude);
+                        
+                        // Use reverse geocoding for real address
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLatitude}&lon=${userLongitude}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.display_name) {
+                                    currentAddress = data.display_name.split(',').slice(0, 2).join(','); // Get first 2 parts
+                                } else {
+                                    currentAddress = `Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}`;
+                                }
+                                console.log('Address resolved:', currentAddress);
+                                resolve({ 
+                                    latitude: userLatitude, 
+                                    longitude: userLongitude,
+                                    address: currentAddress
+                                });
+                            })
+                            .catch(() => {
+                                currentAddress = `Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}`;
+                                console.log('Using coordinates as address');
+                                resolve({ 
+                                    latitude: userLatitude, 
+                                    longitude: userLongitude,
+                                    address: currentAddress
+                                });
+                            });
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        // Use default location if geolocation fails
+                        userLatitude = 23.2599;
+                        userLongitude = 77.4126;
+                        currentAddress = "Bhopal, Madhya Pradesh";
+                        console.log('Using default location:', userLatitude, userLongitude);
+                        resolve({ 
+                            latitude: userLatitude, 
+                            longitude: userLongitude,
+                            address: currentAddress
+                        });
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 60000
+                    }
+                );
+            });
+        }
+
+        // Load marquee advertisements
+        function loadMarquee() {
+            marqueeContent.innerHTML = '';
+            
+            const duplicatedAds = [...marqueeAds, ...marqueeAds, ...marqueeAds];
+            
+            duplicatedAds.forEach(ad => {
+                const marqueeItem = document.createElement('div');
+                marqueeItem.className = 'marquee-text';
+                marqueeItem.innerHTML = `
+                    <i class="${ad.icon}"></i>
+                    ${ad.text}
+                `;
+                marqueeContent.appendChild(marqueeItem);
+            });
+        }
+
+        // Search nearby salons using PostGIS function
+        async function searchNearbySalons() {
+            console.log('Searching nearby salons with PostGIS...');
+            if (!userLatitude || !userLongitude) {
+                console.error('User location not available');
+                showToast('Please enable location services first', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            
+            try {
+                console.log('Calling PostGIS function with coordinates:', userLatitude, userLongitude);
+                
+                // Call the PostGIS function
+                const { data: salons, error } = await supabase
+                    .rpc('nearby_salons', {
+                        user_lat: userLatitude,
+                        user_long: userLongitude,
+                        max_dist: 10000  // 10 km in meters
+                    });
+
+                if (error) {
+                    console.error('Supabase RPC error:', error);
+                    // Try alternative query if PostGIS function fails
+                    console.log('Trying alternative query...');
+                    const { data: allSalons, error: salonsError } = await supabase
+                        .from('salons')
+                        .select('*')
+                        .eq('is_active', true)
+                        .limit(50);
+                    
+                    if (salonsError) {
+                        throw salonsError;
+                    }
+                    
+                    if (!allSalons || allSalons.length === 0) {
+                        showToast('No salons found in database', 'error');
+                        showLoading(false);
+                        return;
+                    }
+                    
+                    // Calculate distances manually
+                    const salonsWithDistance = allSalons.map(salon => {
+                        const distance = calculateDistance(
+                            userLatitude, 
+                            userLongitude, 
+                            salon.latitude, 
+                            salon.longitude
+                        );
+                        return {
+                            ...salon,
+                            dist_meters: distance * 1000,
+                            dist_km: distance
+                        };
+                    }).filter(salon => salon.dist_km <= 10)
+                      .sort((a, b) => a.dist_km - b.dist_km);
+                    
+                    displaySalonsOnMap(salonsWithDistance);
+                    return;
+                }
+                
+                console.log('Salons found via PostGIS:', salons ? salons.length : 0);
+                
+                if (!salons || salons.length === 0) {
+                    console.log('No salons found via PostGIS function');
+                    showToast('No salons found within 10km radius', 'error');
+                    showLoading(false);
+                    return;
+                }
+                
+                displaySalonsOnMap(salons);
+                
+            } catch (error) {
+                console.error('Error searching salons:', error);
+                showToast('Error searching for salons: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Calculate distance between two coordinates (Haversine formula)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Display salons on map
+        function displaySalonsOnMap(salons) {
+            // Clear existing salon markers
+            salonMarkers.forEach(marker => marker.remove());
+            salonMarkers = [];
+            
+            // Add salon markers to map
+            salons.forEach((salon, index) => {
+                const salonImage = salon.salon_image || demoSalonImages[index % demoSalonImages.length];
+                const distanceKm = (salon.dist_meters / 1000).toFixed(1);
+                
+                // Create custom icon for salon
+                const salonIcon = L.divIcon({
+                    className: 'salon-marker',
+                    html: `<div style="background-color: #8a6d3b; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                            <i class="fas fa-scissors"></i>
+                        </div>`,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                
+                const marker = L.marker([salon.latitude, salon.longitude], { icon: salonIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div class="salon-popup">
+                            <img src="${salonImage}" alt="${salon.name}">
+                            <div class="popup-title">${salon.name}</div>
+                            <div class="popup-distance">
+                                <i class="fas fa-map-marker-alt me-1"></i>${distanceKm} km away
+                            </div>
+                            <div class="popup-rating">
+                                <i class="fas fa-star"></i> ${salon.rating || '4.5'}
+                            </div>
+                            <p style="font-size: 11px; color: #666; margin: 5px 0;">${salon.address || 'Address not available'}</p>
+                            <button class="btn btn-primary btn-sm popup-button" onclick="openBookingPanel('${salon.id}')">
+                                <i class="fas fa-calendar-plus me-1"></i>Book Now
+                            </button>
+                        </div>
+                    `);
+                
+                salonMarkers.push(marker);
+            });
+            
+            showToast(`Found ${salons.length} salons nearby`, 'success');
+        }
+
+        // Show/hide loading overlay
+        function showLoading(show) {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+        // Show toast message
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+            toast.textContent = message;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Center map to user location
+        function centerToUserLocation() {
+            if (map && userLatitude && userLongitude) {
+                map.setView([userLatitude, userLongitude], 15);
+                userMarker.openPopup();
+            }
+        }
+
+        // Open booking panel
+        async function openBookingPanel(salonId) {
+            console.log('Opening booking panel for salon:', salonId);
+            currentSalonId = salonId;
+            
+            let { data: salon, error } = await supabase
+                .from("salons")
+                .select("*")
+                .eq("id", salonId)
+                .single();
+
+            if (error) {
+                showToast('Error fetching salon details: ' + error.message, 'error');
+                return;
+            }
+            
+            currentSalon = salon;
+            
+            let { data: barbers, error: barbersError } = await supabase
+                .from("barbers")
+                .select("*")
+                .eq("salon_id", salonId)
+                .eq("is_active", true);
+
+            if (barbersError) {
+                console.error("Error fetching barbers: ", barbersError);
+                barbers = [];
+            }
+            
+            let { data: services, error: servicesError } = await supabase
+                .from("salon_services")
+                .select("*")
+                .eq("salon_id", salonId);
+
+            if (servicesError) {
+                console.error("Error fetching services: ", servicesError);
+                services = [];
+            }
+            
+            // Display barbers
+            const barbersList = document.getElementById('barbersList');
+            barbersList.innerHTML = '';
+            
+            if (barbers.length === 0) {
+                barbersList.innerHTML = '<p class="text-muted">No barbers available for this salon.</p>';
+            } else {
+                barbers.forEach(barber => {
+                    const barberCard = document.createElement('div');
+                    barberCard.className = 'barber-card';
+                    barberCard.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <img src="${barber.image_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'}" 
+                                 class="barber-image" alt="${barber.name}" loading="lazy">
+                            <div>
+                                <h6 class="mb-1">${barber.name}</h6>
+                                <p class="mb-1 text-muted">${barber.experience_years} years experience</p>
+                                <p class="mb-0 text-muted">${barber.specialization || 'General Barber'}</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    barberCard.addEventListener('click', function() {
+                        document.querySelectorAll('.barber-card').forEach(card => {
+                            card.classList.remove('selected');
+                        });
+                        
+                        this.classList.add('selected');
+                        selectedBarber = barber;
+                    });
+                    
+                    barbersList.appendChild(barberCard);
+                });
+            }
+            
+            // Display services
+            const servicesList = document.getElementById('servicesList');
+            servicesList.innerHTML = '';
+            
+            if (services.length === 0) {
+                servicesList.innerHTML = '<p class="text-muted">No services available for this salon.</p>';
+            } else {
+                services.forEach(service => {
+                    const serviceCheckbox = document.createElement('div');
+                    serviceCheckbox.className = 'service-checkbox';
+                    serviceCheckbox.innerHTML = `
+                        <input type="checkbox" id="service-${service.id}" value="${service.id}">
+                        <div class="service-info">
+                            <div class="service-name">${service.service_name}</div>
+                            <div class="service-duration">${service.estimated_time_minutes} minutes</div>
+                        </div>
+                        <div class="service-price-display">₹${service.price}</div>
+                    `;
+                    
+                    serviceCheckbox.addEventListener('click', function() {
+                        const checkbox = this.querySelector('input');
+                        checkbox.checked = !checkbox.checked;
+                        
+                        if (checkbox.checked) {
+                            if (selectedServices.length >= 10) {
+                                showToast('Maximum 10 services allowed per booking', 'error');
+                                checkbox.checked = false;
+                                return;
+                            }
+                            
+                            this.classList.add('selected');
+                            selectedServices.push(service);
+                        } else {
+                            this.classList.remove('selected');
+                            selectedServices = selectedServices.filter(s => s.id !== service.id);
+                        }
+                    });
+                    
+                    servicesList.appendChild(serviceCheckbox);
+                });
+            }
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('bookingDate').min = today;
+            
+            if (currentUser && currentUser.userData) {
+                document.getElementById('customerName').value = currentUser.userData.full_name || '';
+                document.getElementById('customerPhone').value = currentUser.userData.phone || '';
+                document.getElementById('upi_id').value = currentUser.userData.upi_id || '';
+            }
+            
+            document.getElementById('bookingPanel').classList.add('active');
+            document.getElementById('bookingOverlay').classList.add('active');
+        }
+
+        // Close booking panel
+        function closeBookingPanel() {
+            document.getElementById('bookingPanel').classList.remove('active');
+            document.getElementById('bookingOverlay').classList.remove('active');
+            
+            document.querySelector('.step[data-step="1"]').classList.add('active');
+            document.querySelector('.step[data-step="2"]').classList.remove('active');
+            document.querySelector('.step[data-step="3"]').classList.remove('active');
+            document.querySelector('.step[data-step="4"]').classList.remove('active');
+            
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step3').classList.remove('active');
+            document.getElementById('step4').classList.remove('active');
+            
+            selectedBarber = null;
+            selectedDate = null;
+            selectedTime = null;
+            selectedServices = [];
+        }
+
+        // Load time slots for selected date
+        async function loadTimeSlots() {
+            if (!selectedDate || !selectedBarber) return;
+            
+            const timeSlotsContainer = document.getElementById('timeSlots');
+            timeSlotsContainer.innerHTML = '<p class="text-muted">Loading available time slots...</p>';
+            
+            try {
+                const { data: bookings, error } = await supabase
+                    .from('bookings')
+                    .select('booking_time')
+                    .eq('barber_id', selectedBarber.id)
+                    .eq('booking_date', selectedDate)
+                    .eq('status', 'confirmed');
+                
+                if (error) throw error;
+                
+                const bookedTimes = bookings ? bookings.map(booking => booking.booking_time) : [];
+                
+                const slots = [];
+                const startHour = 9;
+                const endHour = 18;
+                
+                for (let hour = startHour; hour < endHour; hour++) {
+                    for (let minute = 0; minute < 60; minute += 30) {
+                        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                        const isBooked = bookedTimes.includes(timeString);
+                        
+                        slots.push({
+                            time: timeString,
+                            booked: isBooked
+                        });
+                    }
+                }
+                
+                timeSlotsContainer.innerHTML = '';
+                
+                if (slots.length === 0) {
+                    timeSlotsContainer.innerHTML = '<p class="text-muted">No time slots available</p>';
+                    return;
+                }
+                
+                slots.forEach(slot => {
+                    const timeSlot = document.createElement('span');
+                    timeSlot.className = `time-slot ${slot.booked ? 'booked' : ''}`;
+                    timeSlot.textContent = slot.time;
+                    
+                    if (!slot.booked) {
+                        timeSlot.addEventListener('click', function() {
+                            document.querySelectorAll('.time-slot').forEach(s => {
+                                if (!s.classList.contains('booked')) {
+                                    s.classList.remove('selected');
+                                }
+                            });
+                            
+                            this.classList.add('selected');
+                            selectedTime = slot.time;
+                        });
+                    }
+                    
+                    timeSlotsContainer.appendChild(timeSlot);
+                });
+                
+            } catch (error) {
+                console.error('Error loading time slots:', error);
+                timeSlotsContainer.innerHTML = '<p class="text-muted">Error loading time slots</p>';
+            }
+        }
+
+        // Initialize the application
+        async function init() {
+            console.log('Initializing application...');
+            showLoading(true);
+            
+            try {
+                currentUser = await checkUserLogin();
+                if (!currentUser) return;
+                
+                loadMarquee();
+                
+                const location = await getCurrentLocation();
+                locationText.textContent = currentAddress;
+                
+                initializeMap(userLatitude, userLongitude);
+                
+                console.log('Application initialized successfully');
+                
+            } catch (error) {
+                console.error('Error initializing application:', error);
+                showToast('Error initializing application: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing app...');
+            init();
+            
+            searchSalonsBtn.addEventListener('click', async function() {
+                console.log('Search salons button clicked');
+                await searchNearbySalons();
+            });
+            
+            currentLocationBtn.addEventListener('click', async function() {
+                showLoading(true);
+                try {
+                    const location = await getCurrentLocation();
+                    centerToUserLocation();
+                    locationText.textContent = currentAddress;
+                } catch (error) {
+                    console.error('Error refreshing location:', error);
+                    showToast('Error refreshing location', 'error');
+                } finally {
+                    showLoading(false);
+                }
+            });
+            
+            document.getElementById('closeBookingPanel').addEventListener('click', closeBookingPanel);
+            document.getElementById('bookingOverlay').addEventListener('click', closeBookingPanel);
+            
+            // ... rest of your event listeners remain the same ...
+            document.getElementById('nextToStep2').addEventListener('click', function() {
+                if (!selectedBarber) {
+                    showToast('Please select a barber', 'error');
+                    return;
+                }
+                
+                document.querySelector('.step[data-step="1"]').classList.remove('active');
+                document.querySelector('.step[data-step="2"]').classList.add('active');
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById('step2').classList.add('active');
+            });
+            
+            document.getElementById('backToStep1').addEventListener('click', function() {
+                document.querySelector('.step[data-step="2"]').classList.remove('active');
+                document.querySelector('.step[data-step="1"]').classList.add('active');
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step1').classList.add('active');
+            });
+            
+            document.getElementById('nextToStep3').addEventListener('click', function() {
+                if (selectedServices.length === 0) {
+                    showToast('Please select at least one service', 'error');
+                    return;
+                }
+                
+                document.querySelector('.step[data-step="2"]').classList.remove('active');
+                document.querySelector('.step[data-step="3"]').classList.add('active');
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step3').classList.add('active');
+                
+                loadTimeSlots();
+            });
+            
+            document.getElementById('backToStep2').addEventListener('click', function() {
+                document.querySelector('.step[data-step="3"]').classList.remove('active');
+                document.querySelector('.step[data-step="2"]').classList.add('active');
+                document.getElementById('step3').classList.remove('active');
+                document.getElementById('step2').classList.add('active');
+            });
+            
+            document.getElementById('nextToStep4').addEventListener('click', function() {
+                if (!selectedDate || !selectedTime) {
+                    showToast('Please select a date and time', 'error');
+                    return;
+                }
+                
+                document.querySelector('.step[data-step="3"]').classList.remove('active');
+                document.querySelector('.step[data-step="4"]').classList.add('active');
+                document.getElementById('step3').classList.remove('active');
+                document.getElementById('step4').classList.add('active');
+            });
+            
+            document.getElementById('backToStep3').addEventListener('click', function() {
+                document.querySelector('.step[data-step="4"]').classList.remove('active');
+                document.querySelector('.step[data-step="3"]').classList.add('active');
+                document.getElementById('step4').classList.remove('active');
+                document.getElementById('step3').classList.add('active');
+            });
+            
+            document.getElementById('bookingDate').addEventListener('change', function() {
+                selectedDate = this.value;
+                selectedTime = null;
+                loadTimeSlots();
+            });
+            
+            document.getElementById('confirmBooking').addEventListener('click', async function() {
+                const customerUTR = document.getElementById('customerUTR').value.trim();
+                
+                if (!customerUTR) {
+                    showToast('Please enter UTR number', 'error');
+                    return;
+                }
+                
+                let totalAmount = 0;
+                let totalDuration = 0;
+                
+                selectedServices.forEach(service => {
+                    totalAmount += parseFloat(service.price);
+                    totalDuration += service.estimated_time_minutes;
+                });
+                
+                const tokenAmount = totalAmount * 0.5;
+                
+                try {
+                    const { data: booking, error } = await supabase
+                        .from('bookings')
+                        .insert([{
+                            salon_id: currentSalonId,
+                            barber_id: selectedBarber.id,
+                            customer_id: currentUser.userData.id,
+                            booking_date: selectedDate,
+                            booking_time: selectedTime,
+                            total_amount: totalAmount,
+                            token_amount: tokenAmount,
+                            token_utr: customerUTR,
+                            total_duration_minutes: totalDuration,
+                            customer_name: currentUser.userData.full_name,
+                            customer_phone: currentUser.userData.phone,
+                            customer_email: document.getElementById('customerEmail').value || null,
+                            special_instructions: document.getElementById('specialInstructions').value || null,
+                            status: 'pending_payment'
+                        }])
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    const bookingServices = selectedServices.map(service => ({
+                        booking_id: booking.id,
+                        service_id: service.id,
+                        price: service.price,
+                        quantity: 1
+                    }));
+                    
+                    const { error: servicesError } = await supabase
+                        .from('booking_services')
+                        .insert(bookingServices);
+                    
+                    if (servicesError) throw servicesError;
+                    
+                    showToast('Booking confirmed successfully!', 'success');
+                    
+                    setTimeout(() => {
+                        closeBookingPanel();
+                        // Redirect to bookings page
+                        window.location.href = 'bookings.html';
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Error creating booking:', error);
+                    showToast('Error creating booking: ' + error.message, 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>4/dist/leaflet.js"></script>
     <style>
         :root {
             --primary: #000;
