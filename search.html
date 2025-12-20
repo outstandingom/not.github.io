@@ -20,7 +20,7 @@
             margin: 0;
             padding: 0;
             background: white;
-            padding-bottom: 70px; /* ADD THIS - Prevents content from hiding behind nav */
+            padding-bottom: 70px; /* Added for bottom nav */
         }
         
         .header {
@@ -87,12 +87,12 @@
         }
         
         #map {
-            height: calc(100vh - 200px); /* CHANGED from 160px to 200px for bottom nav */
+            height: calc(100vh - 200px); /* Adjusted for bottom nav */
             width: 100%;
             z-index: 1;
         }
         
-        /* FIXED: Added dot (.) before bottom-nav */
+        /* Fixed bottom-nav selector */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -196,7 +196,7 @@
         
         .current-location-btn {
             position: absolute;
-            bottom: 90px; /* ADJUSTED from 80px to 90px */
+            bottom: 90px; /* Adjusted for bottom nav */
             right: 15px;
             z-index: 1000;
             background: white;
@@ -213,7 +213,7 @@
         
         .search-salons-btn {
             position: absolute;
-            bottom: 145px; /* ADJUSTED from 135px to 145px */
+            bottom: 145px; /* Adjusted for bottom nav */
             right: 15px;
             z-index: 1000;
             background: var(--secondary);
@@ -474,14 +474,6 @@
                 right: -500px;
             }
         }
-
-        /* ADD THIS for mobile optimization */
-        @media (max-width: 767px) {
-            .booking-panel {
-                height: calc(100% - 70px);
-                bottom: 70px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -646,7 +638,7 @@
         </div>
     </div>
 
-    <!-- Bottom Navigation - MOVED HERE, before closing body tag -->
+    <!-- Bottom Navigation -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item">
             <i class="fas fa-home"></i>
@@ -705,15 +697,6 @@
         const loadingOverlay = document.getElementById('loadingOverlay');
         const marqueeContent = document.getElementById('marqueeContent');
 
-        // Demo salon images
-        const demoSalonImages = [
-            'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&h=200&fit=crop',
-            'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=300&h=200&fit=crop',
-            'https://images.unsplash.com/photo-1631729371254-42c2892fbc16?w=300&h=200&fit=crop',
-            'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300&h=200&fit=crop',
-            'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=300&h=200&fit=crop'
-        ];
-
         // Marquee advertisements
         const marqueeAds = [
             { icon: 'fas fa-tag', text: '50% OFF on First Haircut' },
@@ -750,19 +733,7 @@
                 
                 if (userError) {
                     console.error('User data error:', userError);
-                    // Don't throw error here, just show loading and continue
-                    console.log('Using default user data');
-                    // Return a minimal user object to continue
-                    return {
-                        session: session,
-                        user: session.user,
-                        userData: {
-                            id: session.user.id,
-                            full_name: session.user.email.split('@')[0],
-                            phone: 'Not available',
-                            upi_id: 'Not available'
-                        }
-                    };
+                    throw userError;
                 }
                 
                 console.log('User data loaded:', userData);
@@ -775,19 +746,8 @@
                 
             } catch (error) {
                 console.error('Error checking user login:', error);
-                // Instead of redirecting immediately, show error and continue
-                showToast('Login session issue. Please login again if problems persist.', 'error');
-                // Return minimal data to allow app to function
-                return {
-                    session: null,
-                    user: null,
-                    userData: {
-                        id: 'temp-user',
-                        full_name: 'Guest User',
-                        phone: 'Not available',
-                        upi_id: 'Not available'
-                    }
-                };
+                window.location.href = 'login.html';
+                return false;
             }
         }
 
@@ -823,147 +783,63 @@
             console.log('Map initialized successfully');
         }
 
-        // Get user's current location - OPTIMIZED VERSION
+        // Get user's current location
         function getCurrentLocation() {
             return new Promise((resolve, reject) => {
                 console.log('Getting current location...');
+                if (!navigator.geolocation) {
+                    console.error('Geolocation not supported');
+                    reject(new Error('Geolocation not supported'));
+                    return;
+                }
                 
-                // First check if we have cached location
-                const cachedLocation = localStorage.getItem('userLocation');
-                if (cachedLocation) {
-                    const location = JSON.parse(cachedLocation);
-                    const cacheTime = location.timestamp;
-                    const now = Date.now();
-                    const cacheAge = now - cacheTime;
-                    
-                    // Use cached location if less than 5 minutes old
-                    if (cacheAge < 5 * 60 * 1000) {
-                        console.log('Using cached location:', location);
-                        userLatitude = location.latitude;
-                        userLongitude = location.longitude;
-                        currentAddress = location.address;
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLatitude = position.coords.latitude;
+                        userLongitude = position.coords.longitude;
+                        console.log('Location obtained:', userLatitude, userLongitude);
                         
+                        // Get real address from coordinates using reverse geocoding
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLatitude}&lon=${userLongitude}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.display_name) {
+                                    currentAddress = data.display_name;
+                                } else {
+                                    currentAddress = `Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}`;
+                                }
+                                console.log('Address resolved:', currentAddress);
+                                resolve({ 
+                                    latitude: userLatitude, 
+                                    longitude: userLongitude,
+                                    address: currentAddress
+                                });
+                            })
+                            .catch(() => {
+                                currentAddress = `Lat: ${userLatitude.toFixed(4)}, Lng: ${userLongitude.toFixed(4)}`;
+                                console.log('Using coordinates as address');
+                                resolve({ 
+                                    latitude: userLatitude, 
+                                    longitude: userLongitude,
+                                    address: currentAddress
+                                });
+                            });
+                    },
+                    (error) => {
+                        console.error('Geolocation error:', error);
+                        // Use default location if geolocation fails
+                        userLatitude = 23.2599;
+                        userLongitude = 77.4126;
+                        currentAddress = "Bhopal, Madhya Pradesh";
+                        console.log('Using default location:', userLatitude, userLongitude);
                         resolve({ 
                             latitude: userLatitude, 
                             longitude: userLongitude,
                             address: currentAddress
                         });
-                        return;
-                    }
-                }
-                
-                if (!navigator.geolocation) {
-                    console.error('Geolocation not supported');
-                    // Use default location
-                    userLatitude = 23.2599;
-                    userLongitude = 77.4126;
-                    currentAddress = "9 Neelbad Rd, Bhopal";
-                    
-                    // Cache the default location
-                    localStorage.setItem('userLocation', JSON.stringify({
-                        latitude: userLatitude,
-                        longitude: userLongitude,
-                        address: currentAddress,
-                        timestamp: Date.now()
-                    }));
-                    
-                    resolve({ 
-                        latitude: userLatitude, 
-                        longitude: userLongitude,
-                        address: currentAddress
-                    });
-                    return;
-                }
-                
-                // Set a timeout for geolocation
-                const geoTimeout = setTimeout(() => {
-                    console.log('Geolocation timeout, using default location');
-                    userLatitude = 23.2599;
-                    userLongitude = 77.4126;
-                    currentAddress = "9 Neelbad Rd, Bhopal";
-                    
-                    localStorage.setItem('userLocation', JSON.stringify({
-                        latitude: userLatitude,
-                        longitude: userLongitude,
-                        address: currentAddress,
-                        timestamp: Date.now()
-                    }));
-                    
-                    resolve({ 
-                        latitude: userLatitude, 
-                        longitude: userLongitude,
-                        address: currentAddress
-                    });
-                }, 5000); // 5 second timeout
-                
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        clearTimeout(geoTimeout);
-                        userLatitude = position.coords.latitude;
-                        userLongitude = position.coords.longitude;
-                        console.log('Location obtained:', userLatitude, userLongitude);
-                        
-                        getAddressFromCoordinates(userLatitude, userLongitude)
-                            .then(address => {
-                                currentAddress = address;
-                                console.log('Address resolved:', address);
-                                
-                                // Cache the location
-                                localStorage.setItem('userLocation', JSON.stringify({
-                                    latitude: userLatitude,
-                                    longitude: userLongitude,
-                                    address: address,
-                                    timestamp: Date.now()
-                                }));
-                                
-                                resolve({ 
-                                    latitude: userLatitude, 
-                                    longitude: userLongitude,
-                                    address: address
-                                });
-                            })
-                            .catch(() => {
-                                currentAddress = "Current Location";
-                                console.log('Using default address');
-                                
-                                localStorage.setItem('userLocation', JSON.stringify({
-                                    latitude: userLatitude,
-                                    longitude: userLongitude,
-                                    address: "Current Location",
-                                    timestamp: Date.now()
-                                }));
-                                
-                                resolve({ 
-                                    latitude: userLatitude, 
-                                    longitude: userLongitude,
-                                    address: "Current Location"
-                                });
-                            });
-                    },
-                    (error) => {
-                        clearTimeout(geoTimeout);
-                        console.error('Geolocation error:', error);
-                        // Use default location (Bhopal) if geolocation fails
-                        userLatitude = 23.2599;
-                        userLongitude = 77.4126;
-                        currentAddress = "9 Neelbad Rd, Bhopal";
-                        console.log('Using default location:', userLatitude, userLongitude);
-                        
-                        localStorage.setItem('userLocation', JSON.stringify({
-                            latitude: userLatitude,
-                            longitude: userLongitude,
-                            address: currentAddress,
-                            timestamp: Date.now()
-                        }));
-                        
-                        resolve({ 
-                            latitude: userLatitude, 
-                            longitude: userLongitude,
-                            address: "9 Neelbad Rd, Bhopal"
-                        });
                     },
                     {
-                        enableHighAccuracy: false, // Changed to false for faster response
+                        enableHighAccuracy: true,
                         timeout: 10000,
                         maximumAge: 60000
                     }
@@ -971,30 +847,11 @@
             });
         }
 
-        // Get address from coordinates (simplified)
-        function getAddressFromCoordinates(lat, lng) {
-            return new Promise((resolve) => {
-                // Simulate API call with timeout
-                setTimeout(() => {
-                    const addresses = [
-                        "9 Neelbad Rd, Bhopal",
-                        "MP Nagar, Bhopal", 
-                        "New Market, Bhopal",
-                        "Arera Colony, Bhopal",
-                        "Shahpura, Bhopal"
-                    ];
-                    const randomAddress = addresses[Math.floor(Math.random() * addresses.length)];
-                    resolve(randomAddress);
-                }, 500); // Faster response
-            });
-        }
-
         // Load marquee advertisements
         function loadMarquee() {
             marqueeContent.innerHTML = '';
             
-            // Load only 2 sets for faster rendering
-            const duplicatedAds = [...marqueeAds, ...marqueeAds];
+            const duplicatedAds = [...marqueeAds, ...marqueeAds, ...marqueeAds];
             
             duplicatedAds.forEach(ad => {
                 const marqueeItem = document.createElement('div');
@@ -1007,7 +864,7 @@
             });
         }
 
-        // Search nearby salons using PostGIS function
+        // Search nearby salons using PostGIS function - REAL DATA ONLY
         async function searchNearbySalons() {
             console.log('Searching nearby salons with PostGIS...');
             if (!userLatitude || !userLongitude) {
@@ -1021,7 +878,7 @@
             try {
                 console.log('Calling PostGIS function with coordinates:', userLatitude, userLongitude);
                 
-                // Call the PostGIS function
+                // Call the PostGIS function to get REAL salons from database
                 const { data: salons, error } = await supabase
                     .rpc('nearby_salons', {
                         user_lat: userLatitude,
@@ -1031,12 +888,10 @@
 
                 if (error) {
                     console.error('Supabase RPC error:', error);
-                    // Show demo salons if API fails
-                    showDemoSalons();
-                    return;
+                    throw error;
                 }
                 
-                console.log('Salons found via PostGIS:', salons ? salons.length : 0);
+                console.log('Real salons found via PostGIS:', salons ? salons.length : 0);
                 
                 // Clear existing salon markers
                 salonMarkers.forEach(marker => marker.remove());
@@ -1044,13 +899,13 @@
                 
                 if (!salons || salons.length === 0) {
                     console.log('No salons found via PostGIS function');
-                    showDemoSalons();
+                    showToast('No salons found within 10km radius', 'error');
+                    showLoading(false);
                     return;
                 }
                 
-                // Add salon markers to map
-                salons.forEach((salon, index) => {
-                    const randomImage = demoSalonImages[index % demoSalonImages.length];
+                // Add REAL salon markers to map
+                salons.forEach((salon) => {
                     const distanceKm = (salon.dist_meters / 1000).toFixed(1);
                     
                     // Create custom icon for salon
@@ -1063,11 +918,14 @@
                         iconAnchor: [12, 12]
                     });
                     
+                    // Use real salon image from database or placeholder
+                    const salonImage = salon.salon_image || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&h=200&fit=crop';
+                    
                     const marker = L.marker([salon.latitude, salon.longitude], { icon: salonIcon })
                         .addTo(map)
                         .bindPopup(`
                             <div class="salon-popup">
-                                <img src="${randomImage}" alt="${salon.name}" loading="lazy">
+                                <img src="${salonImage}" alt="${salon.name}" loading="lazy">
                                 <div class="popup-title">${salon.name}</div>
                                 <div class="popup-distance">
                                     <i class="fas fa-map-marker-alt me-1"></i>${distanceKm} km away
@@ -1089,74 +947,10 @@
                 
             } catch (error) {
                 console.error('Error searching salons with PostGIS:', error);
-                showDemoSalons();
+                showToast('Error searching for salons: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
-        }
-
-        // Show demo salons if no real ones found
-        function showDemoSalons() {
-            console.log('Showing demo salons');
-            
-            // Clear existing salon markers
-            salonMarkers.forEach(marker => marker.remove());
-            salonMarkers = [];
-            
-            // Add 5 demo salon markers around user location
-            for (let i = 0; i < 5; i++) {
-                const offsetLat = (Math.random() - 0.5) * 0.02;
-                const offsetLng = (Math.random() - 0.5) * 0.02;
-                const salonLat = userLatitude + offsetLat;
-                const salonLng = userLongitude + offsetLng;
-                const randomImage = demoSalonImages[i % demoSalonImages.length];
-                const distanceKm = (Math.random() * 5 + 1).toFixed(1);
-                
-                const salonNames = [
-                    "Style & Cut Salon",
-                    "Modern Barber Shop",
-                    "Elite Grooming",
-                    "Urban Hair Studio",
-                    "Premium Cuts"
-                ];
-                
-                const salonIcon = L.divIcon({
-                    className: 'salon-marker',
-                    html: `<div style="background-color: #8a6d3b; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
-                            <i class="fas fa-scissors"></i>
-                        </div>`,
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
-                });
-                
-                const marker = L.marker([salonLat, salonLng], { icon: salonIcon })
-                    .addTo(map)
-                    .bindPopup(`
-                        <div class="salon-popup">
-                            <img src="${randomImage}" alt="${salonNames[i]}" loading="lazy">
-                            <div class="popup-title">${salonNames[i]}</div>
-                            <div class="popup-distance">
-                                <i class="fas fa-map-marker-alt me-1"></i>${distanceKm} km away
-                            </div>
-                            <div class="popup-rating">
-                                <i class="fas fa-star"></i> ${(Math.random() * 1 + 4).toFixed(1)}
-                            </div>
-                            <p style="font-size: 11px; color: #666; margin: 5px 0;">Demo salon for testing</p>
-                            <button class="btn btn-primary btn-sm popup-button" onclick="showDemoBooking()">
-                                <i class="fas fa-calendar-plus me-1"></i>Book Now
-                            </button>
-                        </div>
-                    `);
-                
-                salonMarkers.push(marker);
-            }
-            
-            showToast('Showing demo salons for testing', 'success');
-        }
-
-        // Show demo booking
-        function showDemoBooking() {
-            showToast('This is a demo salon. Real booking will work with actual salons.', 'error');
         }
 
         // Show/hide loading overlay
@@ -1186,11 +980,12 @@
             }
         }
 
-        // Open booking panel
+        // Open booking panel - REAL DATA ONLY
         async function openBookingPanel(salonId) {
-            console.log('Opening booking panel for salon:', salonId);
+            console.log('Opening booking panel for REAL salon:', salonId);
             currentSalonId = salonId;
             
+            // Fetch REAL salon data
             let { data: salon, error } = await supabase
                 .from("salons")
                 .select("*")
@@ -1204,6 +999,7 @@
             
             currentSalon = salon;
             
+            // Fetch REAL barbers for this salon
             let { data: barbers, error: barbersError } = await supabase
                 .from("barbers")
                 .select("*")
@@ -1212,9 +1008,11 @@
 
             if (barbersError) {
                 console.error("Error fetching barbers: ", barbersError);
+                showToast('No barbers available for this salon', 'error');
                 barbers = [];
             }
             
+            // Fetch REAL services for this salon
             let { data: services, error: servicesError } = await supabase
                 .from("salon_services")
                 .select("*")
@@ -1222,10 +1020,11 @@
 
             if (servicesError) {
                 console.error("Error fetching services: ", servicesError);
+                showToast('No services available for this salon', 'error');
                 services = [];
             }
             
-            // Display barbers
+            // Display REAL barbers
             const barbersList = document.getElementById('barbersList');
             barbersList.innerHTML = '';
             
@@ -1260,7 +1059,7 @@
                 });
             }
             
-            // Display services
+            // Display REAL services
             const servicesList = document.getElementById('servicesList');
             servicesList.innerHTML = '';
             
@@ -1336,7 +1135,7 @@
             selectedServices = [];
         }
 
-        // Load time slots for selected date
+        // Load time slots for selected date - REAL DATA
         async function loadTimeSlots() {
             if (!selectedDate || !selectedBarber) return;
             
@@ -1344,12 +1143,14 @@
             timeSlotsContainer.innerHTML = '<p class="text-muted">Loading available time slots...</p>';
             
             try {
+                // Fetch REAL bookings for this barber on selected date
                 const { data: bookings, error } = await supabase
                     .from('bookings')
                     .select('booking_time')
                     .eq('barber_id', selectedBarber.id)
-                    .eq('booking_date', selectedDate);
-                
+                    .eq('booking_date', selectedDate)
+                    .eq('status', 'confirmed'); // Only check confirmed bookings
+
                 if (error) throw error;
                 
                 const bookedTimes = bookings ? bookings.map(booking => booking.booking_time) : [];
@@ -1404,66 +1205,31 @@
             }
         }
 
-        // Initialize the application - OPTIMIZED VERSION
+        // Initialize the application
         async function init() {
             console.log('Initializing application...');
             showLoading(true);
             
             try {
-                // Load marquee immediately for faster perceived loading
+                // Check user login
+                currentUser = await checkUserLogin();
+                if (!currentUser) return;
+                
+                // Load marquee
                 loadMarquee();
                 
-                // Get location and user data in parallel
-                const [location, user] = await Promise.allSettled([
-                    getCurrentLocation(),
-                    checkUserLogin()
-                ]);
+                // Get user location (REAL location)
+                const location = await getCurrentLocation();
+                locationText.textContent = currentAddress;
                 
-                // Handle location
-                if (location.status === 'fulfilled') {
-                    locationText.textContent = location.value.address;
-                    userLatitude = location.value.latitude;
-                    userLongitude = location.value.longitude;
-                    currentAddress = location.value.address;
-                }
-                
-                // Handle user data
-                if (user.status === 'fulfilled') {
-                    currentUser = user.value;
-                } else {
-                    console.log('Using minimal user data');
-                    currentUser = {
-                        userData: {
-                            full_name: 'Guest User',
-                            phone: 'Not available',
-                            upi_id: 'Not available'
-                        }
-                    };
-                }
-                
-                // Initialize map with location
-                if (userLatitude && userLongitude) {
-                    initializeMap(userLatitude, userLongitude);
-                } else {
-                    // Fallback to default location
-                    userLatitude = 23.2599;
-                    userLongitude = 77.4126;
-                    initializeMap(userLatitude, userLongitude);
-                }
+                // Initialize map with user location
+                initializeMap(userLatitude, userLongitude);
                 
                 console.log('Application initialized successfully');
                 
             } catch (error) {
                 console.error('Error initializing application:', error);
-                showToast('Application loaded with limited functionality', 'error');
-                
-                // Load with defaults
-                userLatitude = 23.2599;
-                userLongitude = 77.4126;
-                currentAddress = "9 Neelbad Rd, Bhopal";
-                locationText.textContent = currentAddress;
-                initializeMap(userLatitude, userLongitude);
-                
+                showToast('Error initializing application: ' + error.message, 'error');
             } finally {
                 showLoading(false);
             }
@@ -1472,16 +1238,15 @@
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing app...');
-            
-            // Start initialization
             init();
             
-            // Add event listeners
+            // Search button click - shows REAL nearby salons
             searchSalonsBtn.addEventListener('click', async function() {
-                console.log('Search salons button clicked');
+                console.log('Search salons button clicked - fetching REAL data');
                 await searchNearbySalons();
             });
             
+            // Current location button
             currentLocationBtn.addEventListener('click', async function() {
                 showLoading(true);
                 try {
@@ -1496,10 +1261,11 @@
                 }
             });
             
+            // Booking panel close
             document.getElementById('closeBookingPanel').addEventListener('click', closeBookingPanel);
             document.getElementById('bookingOverlay').addEventListener('click', closeBookingPanel);
             
-            // ... rest of your event listeners remain the same ...
+            // Booking steps navigation
             document.getElementById('nextToStep2').addEventListener('click', function() {
                 if (!selectedBarber) {
                     showToast('Please select a barber', 'error');
@@ -1565,6 +1331,7 @@
                 loadTimeSlots();
             });
             
+            // Confirm booking - creates REAL booking in database
             document.getElementById('confirmBooking').addEventListener('click', async function() {
                 const customerUTR = document.getElementById('customerUTR').value.trim();
                 
@@ -1584,6 +1351,7 @@
                 const tokenAmount = totalAmount * 0.5;
                 
                 try {
+                    // Create REAL booking in database
                     const { data: booking, error } = await supabase
                         .from('bookings')
                         .insert([{
@@ -1599,13 +1367,15 @@
                             customer_name: currentUser.userData.full_name,
                             customer_phone: currentUser.userData.phone,
                             customer_email: document.getElementById('customerEmail').value || null,
-                            special_instructions: document.getElementById('specialInstructions').value || null
+                            special_instructions: document.getElementById('specialInstructions').value || null,
+                            status: 'pending_payment'
                         }])
                         .select()
                         .single();
                     
                     if (error) throw error;
                     
+                    // Add REAL booking services
                     const bookingServices = selectedServices.map(service => ({
                         booking_id: booking.id,
                         service_id: service.id,
@@ -1623,6 +1393,8 @@
                     
                     setTimeout(() => {
                         closeBookingPanel();
+                        // Redirect to bookings page after successful booking
+                        window.location.href = 'bookings.html';
                     }, 2000);
                     
                 } catch (error) {
