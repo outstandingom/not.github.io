@@ -344,11 +344,76 @@
         .toast.info {
             border-left-color: #17a2b8;
         }
+        
+        .welcome-message {
+            background: linear-gradient(135deg, var(--secondary), #6b5229);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .welcome-message h4 {
+            margin-bottom: 10px;
+        }
+        
+        .location-permission-prompt {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 2001;
+            display: none;
+        }
+        
+        .location-permission-prompt i {
+            font-size: 48px;
+            color: var(--secondary);
+            margin-bottom: 20px;
+        }
+        
+        .permission-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .permission-buttons button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3" id="loadingText">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Location Permission Prompt -->
+    <div class="location-permission-prompt" id="locationPermissionPrompt">
+        <i class="fas fa-map-marker-alt"></i>
+        <h4>Allow Location Access</h4>
+        <p>To find salons near you, we need access to your location. This will help us show you the nearest salons.</p>
+        <div class="permission-buttons">
+            <button class="btn btn-outline-secondary" id="denyLocationBtn">Not Now</button>
+            <button class="btn btn-primary" id="allowLocationBtn">Allow Location</button>
+        </div>
+    </div>
 
     <!-- Header -->
     <div class="header">
@@ -357,7 +422,7 @@
                 <a href="#" class="logo">SevaOn<span>Time</span></a>
                 <a href="#" class="location-link" id="currentLocationLink">
                     <i class="fas fa-map-marker-alt me-1"></i>
-                    <span id="locationText">Getting location...</span>
+                    <span id="locationText">Tap to get location</span>
                 </a>
             </div>
         </div>
@@ -370,8 +435,14 @@
         </div>
     </div>
 
+    <!-- Welcome Message -->
+    <div id="welcomeMessage" class="welcome-message">
+        <h4>Welcome to SevaOnTime!</h4>
+        <p>Find the best salons near you. Allow location access to get started.</p>
+    </div>
+
     <!-- Search Container -->
-    <div class="search-container">
+    <div class="search-container" id="searchContainer" style="display: none;">
         <div class="search-input-group">
             <div class="d-flex align-items-center">
                 <input type="text" class="search-input" id="searchInput" placeholder="Search salons by name or service...">
@@ -384,26 +455,16 @@
     </div>
 
     <!-- Map Container -->
-    <div id="map"></div>
+    <div id="map" style="display: none;"></div>
 
     <!-- Search Nearby Button -->
-    <div class="search-salons-btn" id="searchNearbyBtn" title="Search Nearby Salons">
+    <div class="search-salons-btn" id="searchNearbyBtn" title="Search Nearby Salons" style="display: none;">
         <i class="fas fa-search-location"></i>
     </div>
 
     <!-- Current Location Button -->
-    <div class="current-location-btn" id="currentLocationBtn" title="Current Location">
+    <div class="current-location-btn" id="currentLocationBtn" title="Current Location" style="display: none;">
         <i class="fas fa-location-arrow text-primary"></i>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="text-center">
-            <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-3" id="loadingText">Finding nearby salons...</p>
-        </div>
     </div>
 
     <!-- Bottom Navigation -->
@@ -441,22 +502,65 @@
         let userMarker = null;
         let salonMarkers = [];
         let allSalons = [];
+        let currentUser = null;
 
         // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            initializePage();
-            setupEventListeners();
-            loadAdMarquee();
-            getUserLocation();
+        document.addEventListener('DOMContentLoaded', async function() {
+            showLoading(true, 'Checking authentication...');
+            await checkAuth();
         });
 
-        function initializePage() {
+        async function checkAuth() {
+            try {
+                // Check if user is logged in
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error || !user) {
+                    // User not logged in, redirect to login page
+                    showToast('Please login to continue', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1500);
+                    return;
+                }
+                
+                currentUser = user;
+                console.log('User logged in:', currentUser.email);
+                
+                // User is logged in, continue with page initialization
+                await initializePage();
+                
+            } catch (error) {
+                console.error('Auth check error:', error);
+                showToast('Authentication error. Please login again.', 'error');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1500);
+            }
+        }
+
+        async function initializePage() {
+            showLoading(true, 'Loading page...');
+            
+            // Hide welcome message
+            document.getElementById('welcomeMessage').style.display = 'none';
+            
             // Initialize map with default view (India)
             map = L.map('map').setView([20.5937, 78.9629], 5);
             
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Load ad marquee
+            loadAdMarquee();
+            
+            // Show location permission prompt
+            showLoading(false);
+            showLocationPermissionPrompt();
         }
 
         function setupEventListeners() {
@@ -464,10 +568,16 @@
             document.getElementById('currentLocationBtn').addEventListener('click', getUserLocation);
             document.getElementById('currentLocationLink').addEventListener('click', getUserLocation);
             document.getElementById('searchNearbyBtn').addEventListener('click', searchNearbySalons);
+            document.getElementById('allowLocationBtn').addEventListener('click', getUserLocation);
+            document.getElementById('denyLocationBtn').addEventListener('click', () => {
+                document.getElementById('locationPermissionPrompt').style.display = 'none';
+                document.getElementById('welcomeMessage').style.display = 'block';
+                showToast('You can manually search for salons', 'info');
+            });
             
             // Search functionality
             document.getElementById('searchButton').addEventListener('click', performSearch);
-            document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 300));
+            document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 500));
             document.getElementById('searchInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') performSearch();
             });
@@ -475,9 +585,9 @@
             // Close search results when clicking outside
             document.addEventListener('click', function(e) {
                 const searchResults = document.getElementById('searchResults');
-                const searchContainer = document.querySelector('.search-container');
+                const searchContainer = document.getElementById('searchContainer');
                 
-                if (!searchContainer.contains(e.target)) {
+                if (searchContainer && !searchContainer.contains(e.target)) {
                     searchResults.style.display = 'none';
                 }
             });
@@ -501,12 +611,21 @@
             });
         }
 
+        function showLocationPermissionPrompt() {
+            document.getElementById('locationPermissionPrompt').style.display = 'block';
+        }
+
         function getUserLocation() {
+            // Hide permission prompt and welcome message
+            document.getElementById('locationPermissionPrompt').style.display = 'none';
+            document.getElementById('welcomeMessage').style.display = 'none';
+            
             showLoading(true, 'Getting your location...');
             
             if (!navigator.geolocation) {
                 showToast('Geolocation is not supported by your browser', 'error');
                 showLoading(false);
+                showManualLocationOption();
                 return;
             }
 
@@ -524,33 +643,35 @@
                     // Update location text
                     await updateLocationText();
                     
+                    // Show map and search interface
+                    showMapInterface();
+                    
                     // Update map with user location
                     updateMapWithUserLocation();
                     
-                    // Search for nearby salons
-                    await searchNearbySalons();
-                    
                     showLoading(false);
+                    showToast('Location found! Click the search button to find nearby salons.', 'info');
                 },
                 function(error) {
                     showLoading(false);
                     
-                    let errorMessage = 'Unable to get your location. ';
+                    let errorMessage = '';
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
-                            errorMessage += 'Please allow location access in your browser settings.';
+                            errorMessage = 'Location access denied. You can manually search for salons.';
                             break;
                         case error.POSITION_UNAVAILABLE:
-                            errorMessage += 'Location information is unavailable.';
+                            errorMessage = 'Location information is unavailable.';
                             break;
                         case error.TIMEOUT:
-                            errorMessage += 'Location request timed out.';
+                            errorMessage = 'Location request timed out.';
                             break;
                         default:
-                            errorMessage += 'An unknown error occurred.';
+                            errorMessage = 'An unknown error occurred.';
                     }
                     
                     showToast(errorMessage, 'error');
+                    showManualLocationOption();
                 },
                 {
                     enableHighAccuracy: true,
@@ -558,6 +679,72 @@
                     maximumAge: 0
                 }
             );
+        }
+
+        function showManualLocationOption() {
+            document.getElementById('locationText').textContent = 'Enter location manually';
+            document.getElementById('currentLocationLink').onclick = function() {
+                const city = prompt('Enter your city name:');
+                if (city) {
+                    geocodeCity(city);
+                }
+            };
+            
+            // Still show search interface but without automatic location
+            showMapInterface();
+        }
+
+        function showMapInterface() {
+            // Show map
+            document.getElementById('map').style.display = 'block';
+            
+            // Show search container
+            document.getElementById('searchContainer').style.display = 'block';
+            
+            // Show floating buttons
+            document.getElementById('searchNearbyBtn').style.display = 'flex';
+            document.getElementById('currentLocationBtn').style.display = 'flex';
+        }
+
+        async function geocodeCity(city) {
+            showLoading(true, `Searching for ${city}...`);
+            
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`
+                );
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    userLocation = {
+                        latitude: parseFloat(data[0].lat),
+                        longitude: parseFloat(data[0].lon),
+                        timestamp: new Date().getTime(),
+                        city: city
+                    };
+                    
+                    localStorage.setItem('userLocation', JSON.stringify(userLocation));
+                    
+                    // Update location text
+                    document.getElementById('locationText').textContent = city;
+                    
+                    // Show map interface
+                    showMapInterface();
+                    
+                    // Update map
+                    updateMapWithUserLocation();
+                    
+                    showLoading(false);
+                    showToast(`Location set to ${city}`, 'success');
+                } else {
+                    showLoading(false);
+                    showToast('City not found. Please try another city.', 'error');
+                }
+            } catch (error) {
+                console.error('Error geocoding city:', error);
+                showLoading(false);
+                showToast('Error setting location. Please try again.', 'error');
+            }
         }
 
         async function updateLocationText() {
@@ -615,7 +802,7 @@
 
         async function searchNearbySalons() {
             if (!userLocation) {
-                showToast('Please enable location access first', 'warning');
+                showToast('Please set your location first', 'warning');
                 getUserLocation();
                 return;
             }
@@ -715,7 +902,7 @@
             }
             
             if (allSalons.length === 0) {
-                searchResults.innerHTML = '<div class="no-results">No salons loaded yet. Please wait...</div>';
+                searchResults.innerHTML = '<div class="no-results">No salons loaded yet. Please search for nearby salons first.</div>';
                 searchResults.style.display = 'block';
                 return;
             }
@@ -778,6 +965,7 @@
             
             // Close search results
             document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('searchInput').value = salon.salon_name;
             
             // Zoom to salon location
             map.setView([salon.latitude, salon.longitude], 15);
