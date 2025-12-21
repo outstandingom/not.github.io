@@ -20,7 +20,6 @@
             margin: 0;
             padding: 0;
             background: white;
-            padding-bottom: 70px;
         }
         
         .header {
@@ -55,7 +54,7 @@
         }
         
         #map {
-            height: calc(100vh - 120px);
+            height: calc(100vh - 60px);
             width: 100%;
             z-index: 1;
         }
@@ -163,7 +162,7 @@
         
         .current-location-btn {
             position: absolute;
-            bottom: 90px;
+            bottom: 80px;
             right: 15px;
             z-index: 1000;
             background: white;
@@ -180,7 +179,7 @@
         
         .search-salons-btn {
             position: absolute;
-            bottom: 145px;
+            bottom: 135px;
             right: 15px;
             z-index: 1000;
             background: var(--secondary);
@@ -198,7 +197,7 @@
         
         .search-container {
             position: absolute;
-            top: 80px;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -237,7 +236,7 @@
         
         .search-results {
             position: absolute;
-            top: 140px;
+            top: 80px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -303,6 +302,8 @@
             padding: 12px 16px;
             margin-bottom: 10px;
             border-radius: 4px;
+            display: flex;
+            align-items: center;
         }
         
         .toast.error {
@@ -332,19 +333,32 @@
             color: #ccc;
             margin-bottom: 20px;
         }
+        
+        .salon-marker {
+            background: var(--secondary);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Loading Overlay (Hidden by default) -->
-    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
         <div class="text-center">
             <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-3" id="loadingText">Loading...</p>
+            <p class="mt-3" id="loadingText">Getting your location...</p>
         </div>
     </div>
 
@@ -363,9 +377,9 @@
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
                 <a href="index.html" class="logo">SevaOn<span>Time</span></a>
-                <a href="#" class="location-link" id="currentLocationLink" onclick="getUserLocation()">
+                <a href="#" class="location-link" id="currentLocationLink">
                     <i class="fas fa-map-marker-alt me-1"></i>
-                    <span id="locationText">Tap to get location</span>
+                    <span id="locationText">Getting location...</span>
                 </a>
             </div>
         </div>
@@ -450,12 +464,13 @@
             setupEventListeners();
             
             // Get user location automatically
-            getUserLocation();
+            getCurrentLocation();
         }
 
         function setupEventListeners() {
             // Location buttons
-            document.getElementById('currentLocationBtn').addEventListener('click', getUserLocation);
+            document.getElementById('currentLocationBtn').addEventListener('click', getCurrentLocation);
+            document.getElementById('currentLocationLink').addEventListener('click', getCurrentLocation);
             document.getElementById('searchNearbyBtn').addEventListener('click', searchNearbySalons);
             document.getElementById('refreshSearchBtn').addEventListener('click', searchNearbySalons);
             
@@ -485,15 +500,14 @@
             });
         }
 
-        function getUserLocation() {
-            showLoading(true, 'Getting your location...');
-            
+        // Use current location
+        function getCurrentLocation() {
             if (!navigator.geolocation) {
                 showToast('Geolocation is not supported by your browser', 'error');
-                showLoading(false);
-                askForManualLocation();
                 return;
             }
+            
+            showLoading(true, 'Getting your location...');
             
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
@@ -507,25 +521,20 @@
                     };
                     
                     // Reverse geocode to get address
-                    try {
-                        const address = await reverseGeocode(lat, lon);
-                        document.getElementById('locationText').textContent = address;
-                    } catch (error) {
-                        document.getElementById('locationText').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-                    }
+                    const address = await reverseGeocode(lat, lon);
+                    document.getElementById('locationText').textContent = address;
                     
                     // Update map with user location
                     updateMapWithUserLocation();
                     
                     showLoading(false);
-                    showToast('Location found!', 'info');
+                    showToast('Location found! Searching nearby salons...', 'info');
                     
                     // Automatically search for nearby salons
                     searchNearbySalons();
                 },
                 function(error) {
                     showLoading(false);
-                    
                     console.error('Error getting location:', error);
                     showToast('Unable to retrieve your location. Please enable location services.', 'error');
                     askForManualLocation();
@@ -623,7 +632,7 @@
         async function searchNearbySalons() {
             if (!userLocation) {
                 showToast('Please set your location first', 'warning');
-                getUserLocation();
+                getCurrentLocation();
                 return;
             }
 
@@ -751,14 +760,14 @@
                 }).addTo(map);
                 
                 // Create popup content
-                const services = salon.services ? JSON.parse(salon.services) : [];
-                const serviceList = services.slice(0, 3).map(s => s.name).join(', ');
+                const services = salon.services ? (typeof salon.services === 'string' ? JSON.parse(salon.services) : salon.services) : [];
+                const serviceList = services.slice(0, 3).map(s => s.name || s.service).join(', ');
                 
                 const popupContent = `
                     <div class="salon-popup">
                         ${salon.image_url ? `<img src="${salon.image_url}" alt="${salon.salon_name}">` : ''}
-                        <div class="popup-title">${salon.salon_name}</div>
-                        <div class="popup-distance">${salon.distance ? salon.distance.toFixed(1) + ' km away' : salon.city}</div>
+                        <div class="popup-title">${salon.salon_name || 'Salon'}</div>
+                        <div class="popup-distance">${salon.distance ? salon.distance.toFixed(1) + ' km away' : (salon.city || '')}</div>
                         <div class="popup-rating">
                             ${getRatingStars(salon.rating || 4.0)}
                         </div>
@@ -821,10 +830,11 @@
                     // Search in services
                     if (salon.services) {
                         try {
-                            const services = JSON.parse(salon.services);
-                            const serviceMatch = services.some(service => 
-                                service.name && service.name.toLowerCase().includes(searchTerm)
-                            );
+                            const services = typeof salon.services === 'string' ? JSON.parse(salon.services) : salon.services;
+                            const serviceMatch = services.some(service => {
+                                const serviceName = service.name || service.service || '';
+                                return serviceName.toLowerCase().includes(searchTerm);
+                            });
                             if (serviceMatch) return true;
                         } catch (e) {
                             // Invalid JSON, skip
@@ -850,7 +860,7 @@
                     if (userLocation && a.distance && b.distance) {
                         return a.distance - b.distance;
                     }
-                    return a.salon_name.localeCompare(b.salon_name);
+                    return (a.salon_name || '').localeCompare(b.salon_name || '');
                 })
                 .slice(0, 10); // Limit to 10 results
             
@@ -862,10 +872,10 @@
                 results.forEach(salon => {
                     html += `
                         <div class="search-result-item" onclick="selectSalonFromSearch('${salon.id}')">
-                            <div class="search-result-name">${salon.salon_name}</div>
+                            <div class="search-result-name">${salon.salon_name || 'Salon'}</div>
                             <div class="d-flex justify-content-between">
                                 <span class="search-result-location">
-                                    <i class="fas fa-map-marker-alt me-1"></i>${salon.city}
+                                    <i class="fas fa-map-marker-alt me-1"></i>${salon.city || ''}
                                 </span>
                                 ${userLocation && salon.distance ? `<span class="search-result-distance">${salon.distance.toFixed(1)} km</span>` : ''}
                             </div>
@@ -884,7 +894,7 @@
             
             // Close search results
             document.getElementById('searchResults').style.display = 'none';
-            document.getElementById('searchInput').value = salon.salon_name;
+            document.getElementById('searchInput').value = salon.salon_name || '';
             
             // Hide no salons message
             document.getElementById('noSalonsMessage').style.display = 'none';
@@ -913,7 +923,7 @@
                     })
                 }).addTo(map);
                 
-                tempMarker.bindPopup(`<b>${salon.salon_name}</b><br>${salon.city}`).openPopup();
+                tempMarker.bindPopup(`<b>${salon.salon_name || 'Salon'}</b><br>${salon.city || ''}`).openPopup();
                 
                 // Remove after 5 seconds
                 setTimeout(() => {
@@ -978,16 +988,17 @@
         }
 
         function showToast(message, type = 'info') {
+            // Remove existing toasts
+            const container = document.getElementById('toastContainer');
+            container.innerHTML = '';
+            
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
-                    ${message}
-                </div>
+                <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                ${message}
             `;
             
-            const container = document.getElementById('toastContainer');
             container.appendChild(toast);
             
             // Remove toast after 3 seconds
@@ -1001,7 +1012,7 @@
         // Make functions available globally
         window.viewSalonDetails = viewSalonDetails;
         window.selectSalonFromSearch = selectSalonFromSearch;
-        window.getUserLocation = getUserLocation; // Make function globally accessible
+        window.getCurrentLocation = getCurrentLocation;
     </script>
 </body>
 </html>
