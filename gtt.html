@@ -345,48 +345,24 @@
             border-left-color: #17a2b8;
         }
         
-        .welcome-message {
-            background: linear-gradient(135deg, var(--secondary), #6b5229);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            border-radius: 10px;
-            margin: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        
-        .welcome-message h4 {
-            margin-bottom: 10px;
-        }
-        
-        .location-permission-prompt {
-            position: fixed;
+        .no-salons-message {
+            position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
-            z-index: 2001;
+            z-index: 100;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             display: none;
         }
         
-        .location-permission-prompt i {
+        .no-salons-message i {
             font-size: 48px;
-            color: var(--secondary);
+            color: #ccc;
             margin-bottom: 20px;
-        }
-        
-        .permission-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        
-        .permission-buttons button {
-            flex: 1;
         }
     </style>
 </head>
@@ -394,35 +370,34 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
+    <!-- Loading Overlay (Hidden by default) -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
         <div class="text-center">
             <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-3" id="loadingText">Loading...</p>
+            <p class="mt-3" id="loadingText">Finding nearby salons...</p>
         </div>
     </div>
 
-    <!-- Location Permission Prompt -->
-    <div class="location-permission-prompt" id="locationPermissionPrompt">
-        <i class="fas fa-map-marker-alt"></i>
-        <h4>Allow Location Access</h4>
-        <p>To find salons near you, we need access to your location. This will help us show you the nearest salons.</p>
-        <div class="permission-buttons">
-            <button class="btn btn-outline-secondary" id="denyLocationBtn">Not Now</button>
-            <button class="btn btn-primary" id="allowLocationBtn">Allow Location</button>
-        </div>
+    <!-- No Salons Message -->
+    <div class="no-salons-message" id="noSalonsMessage">
+        <i class="fas fa-search"></i>
+        <h4>No Salons Found</h4>
+        <p>Try searching with different keywords or check back later.</p>
+        <button class="btn btn-primary mt-2" id="refreshSearchBtn">
+            <i class="fas fa-redo me-2"></i>Search Again
+        </button>
     </div>
 
     <!-- Header -->
     <div class="header">
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
-                <a href="#" class="logo">SevaOn<span>Time</span></a>
+                <a href="index.html" class="logo">SevaOn<span>Time</span></a>
                 <a href="#" class="location-link" id="currentLocationLink">
                     <i class="fas fa-map-marker-alt me-1"></i>
-                    <span id="locationText">Tap to get location</span>
+                    <span id="locationText">Getting location...</span>
                 </a>
             </div>
         </div>
@@ -435,17 +410,11 @@
         </div>
     </div>
 
-    <!-- Welcome Message -->
-    <div id="welcomeMessage" class="welcome-message">
-        <h4>Welcome to SevaOnTime!</h4>
-        <p>Find the best salons near you. Allow location access to get started.</p>
-    </div>
-
     <!-- Search Container -->
-    <div class="search-container" id="searchContainer" style="display: none;">
+    <div class="search-container">
         <div class="search-input-group">
             <div class="d-flex align-items-center">
-                <input type="text" class="search-input" id="searchInput" placeholder="Search salons by name or service...">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search salons by name, service, or city...">
                 <button class="search-button" id="searchButton">
                     <i class="fas fa-search"></i>
                 </button>
@@ -455,15 +424,15 @@
     </div>
 
     <!-- Map Container -->
-    <div id="map" style="display: none;"></div>
+    <div id="map"></div>
 
     <!-- Search Nearby Button -->
-    <div class="search-salons-btn" id="searchNearbyBtn" title="Search Nearby Salons" style="display: none;">
+    <div class="search-salons-btn" id="searchNearbyBtn" title="Search Nearby Salons">
         <i class="fas fa-search-location"></i>
     </div>
 
     <!-- Current Location Button -->
-    <div class="current-location-btn" id="currentLocationBtn" title="Current Location" style="display: none;">
+    <div class="current-location-btn" id="currentLocationBtn" title="Current Location">
         <i class="fas fa-location-arrow text-primary"></i>
     </div>
 
@@ -491,7 +460,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Supabase configuration
+        // Supabase configuration - REPLACE WITH YOUR ACTUAL CREDENTIALS
         const SUPABASE_URL = 'https://your-supabase-url.supabase.co';
         const SUPABASE_KEY = 'your-supabase-anon-key';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -501,50 +470,14 @@
         let userLocation = null;
         let userMarker = null;
         let salonMarkers = [];
-        let allSalons = [];
-        let currentUser = null;
+        let availableSalons = [];
 
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', async function() {
-            showLoading(true, 'Checking authentication...');
-            await checkAuth();
+        // Initialize when DOM is loaded - NO AUTH CHECK ON LOAD
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
         });
 
-        async function checkAuth() {
-            try {
-                // Check if user is logged in
-                const { data: { user }, error } = await supabase.auth.getUser();
-                
-                if (error || !user) {
-                    // User not logged in, redirect to login page
-                    showToast('Please login to continue', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 1500);
-                    return;
-                }
-                
-                currentUser = user;
-                console.log('User logged in:', currentUser.email);
-                
-                // User is logged in, continue with page initialization
-                await initializePage();
-                
-            } catch (error) {
-                console.error('Auth check error:', error);
-                showToast('Authentication error. Please login again.', 'error');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 1500);
-            }
-        }
-
-        async function initializePage() {
-            showLoading(true, 'Loading page...');
-            
-            // Hide welcome message
-            document.getElementById('welcomeMessage').style.display = 'none';
-            
+        function initializePage() {
             // Initialize map with default view (India)
             map = L.map('map').setView([20.5937, 78.9629], 5);
             
@@ -555,12 +488,11 @@
             // Setup event listeners
             setupEventListeners();
             
-            // Load ad marquee
+            // Load ad marquee immediately
             loadAdMarquee();
             
-            // Show location permission prompt
-            showLoading(false);
-            showLocationPermissionPrompt();
+            // Get user location immediately
+            getUserLocation();
         }
 
         function setupEventListeners() {
@@ -568,16 +500,19 @@
             document.getElementById('currentLocationBtn').addEventListener('click', getUserLocation);
             document.getElementById('currentLocationLink').addEventListener('click', getUserLocation);
             document.getElementById('searchNearbyBtn').addEventListener('click', searchNearbySalons);
-            document.getElementById('allowLocationBtn').addEventListener('click', getUserLocation);
-            document.getElementById('denyLocationBtn').addEventListener('click', () => {
-                document.getElementById('locationPermissionPrompt').style.display = 'none';
-                document.getElementById('welcomeMessage').style.display = 'block';
-                showToast('You can manually search for salons', 'info');
-            });
+            document.getElementById('refreshSearchBtn').addEventListener('click', searchNearbySalons);
             
             // Search functionality
             document.getElementById('searchButton').addEventListener('click', performSearch);
-            document.getElementById('searchInput').addEventListener('input', debounce(performSearch, 500));
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.trim();
+                if (searchTerm.length > 2) {
+                    performSearch();
+                } else {
+                    document.getElementById('searchResults').style.display = 'none';
+                }
+            });
+            
             document.getElementById('searchInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') performSearch();
             });
@@ -585,9 +520,9 @@
             // Close search results when clicking outside
             document.addEventListener('click', function(e) {
                 const searchResults = document.getElementById('searchResults');
-                const searchContainer = document.getElementById('searchContainer');
+                const searchContainer = document.querySelector('.search-container');
                 
-                if (searchContainer && !searchContainer.contains(e.target)) {
+                if (!searchContainer.contains(e.target)) {
                     searchResults.style.display = 'none';
                 }
             });
@@ -611,24 +546,17 @@
             });
         }
 
-        function showLocationPermissionPrompt() {
-            document.getElementById('locationPermissionPrompt').style.display = 'block';
-        }
-
         function getUserLocation() {
-            // Hide permission prompt and welcome message
-            document.getElementById('locationPermissionPrompt').style.display = 'none';
-            document.getElementById('welcomeMessage').style.display = 'none';
-            
             showLoading(true, 'Getting your location...');
             
             if (!navigator.geolocation) {
                 showToast('Geolocation is not supported by your browser', 'error');
                 showLoading(false);
-                showManualLocationOption();
+                askForManualLocation();
                 return;
             }
 
+            // Try to get location quickly
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
                     userLocation = {
@@ -637,20 +565,17 @@
                         timestamp: new Date().getTime()
                     };
                     
-                    // Save to localStorage
-                    localStorage.setItem('userLocation', JSON.stringify(userLocation));
-                    
-                    // Update location text
+                    // Update location text immediately
                     await updateLocationText();
-                    
-                    // Show map and search interface
-                    showMapInterface();
                     
                     // Update map with user location
                     updateMapWithUserLocation();
                     
+                    // Hide loading after getting location
                     showLoading(false);
-                    showToast('Location found! Click the search button to find nearby salons.', 'info');
+                    
+                    // Automatically search for nearby salons
+                    searchNearbySalons();
                 },
                 function(error) {
                     showLoading(false);
@@ -658,56 +583,46 @@
                     let errorMessage = '';
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
-                            errorMessage = 'Location access denied. You can manually search for salons.';
+                            errorMessage = 'Location access denied. Please allow location access to find nearby salons.';
+                            askForManualLocation();
                             break;
                         case error.POSITION_UNAVAILABLE:
                             errorMessage = 'Location information is unavailable.';
+                            askForManualLocation();
                             break;
                         case error.TIMEOUT:
                             errorMessage = 'Location request timed out.';
+                            getUserLocation(); // Retry once
                             break;
                         default:
-                            errorMessage = 'An unknown error occurred.';
+                            errorMessage = 'Unable to get location.';
+                            askForManualLocation();
                     }
                     
-                    showToast(errorMessage, 'error');
-                    showManualLocationOption();
+                    if (errorMessage) {
+                        showToast(errorMessage, 'error');
+                    }
                 },
                 {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
+                    enableHighAccuracy: false, // Faster response
+                    timeout: 5000, // 5 seconds timeout
+                    maximumAge: 300000 // Accept cached location up to 5 minutes old
                 }
             );
         }
 
-        function showManualLocationOption() {
-            document.getElementById('locationText').textContent = 'Enter location manually';
-            document.getElementById('currentLocationLink').onclick = function() {
+        function askForManualLocation() {
+            const manualLocation = confirm('Unable to get your location automatically. Would you like to enter your city manually?');
+            if (manualLocation) {
                 const city = prompt('Enter your city name:');
                 if (city) {
                     geocodeCity(city);
                 }
-            };
-            
-            // Still show search interface but without automatic location
-            showMapInterface();
-        }
-
-        function showMapInterface() {
-            // Show map
-            document.getElementById('map').style.display = 'block';
-            
-            // Show search container
-            document.getElementById('searchContainer').style.display = 'block';
-            
-            // Show floating buttons
-            document.getElementById('searchNearbyBtn').style.display = 'flex';
-            document.getElementById('currentLocationBtn').style.display = 'flex';
+            }
         }
 
         async function geocodeCity(city) {
-            showLoading(true, `Searching for ${city}...`);
+            showLoading(true, `Setting location to ${city}...`);
             
             try {
                 const response = await fetch(
@@ -723,19 +638,17 @@
                         city: city
                     };
                     
-                    localStorage.setItem('userLocation', JSON.stringify(userLocation));
-                    
                     // Update location text
                     document.getElementById('locationText').textContent = city;
-                    
-                    // Show map interface
-                    showMapInterface();
                     
                     // Update map
                     updateMapWithUserLocation();
                     
                     showLoading(false);
                     showToast(`Location set to ${city}`, 'success');
+                    
+                    // Search for salons in this city
+                    searchSalonsByCity(city);
                 } else {
                     showLoading(false);
                     showToast('City not found. Please try another city.', 'error');
@@ -807,21 +720,28 @@
                 return;
             }
 
-            showLoading(true, 'Searching nearby salons...');
+            showLoading(true, 'Finding nearby salons...');
             
             try {
-                // Fetch salons from Supabase
+                // Fetch ACTIVE salons from Supabase
                 const { data: salons, error } = await supabase
                     .from('merchants')
                     .select('*')
-                    .eq('status', 'active');
+                    .eq('status', 'active'); // Only fetch active salons
                 
                 if (error) throw error;
                 
-                allSalons = salons || [];
+                availableSalons = salons || [];
+                
+                if (availableSalons.length === 0) {
+                    showLoading(false);
+                    document.getElementById('noSalonsMessage').style.display = 'block';
+                    showToast('No salons available in the database', 'info');
+                    return;
+                }
                 
                 // Calculate distances and sort by nearest
-                const nearbySalons = allSalons
+                const nearbySalons = availableSalons
                     .map(salon => {
                         salon.distance = calculateDistance(
                             userLocation.latitude,
@@ -837,12 +757,69 @@
                 // Display salons on map
                 displaySalonsOnMap(nearbySalons);
                 
-                // Show success message
-                showToast(`Found ${nearbySalons.length} salons near you`, 'info');
+                // Show/hide no results message
+                if (nearbySalons.length === 0) {
+                    document.getElementById('noSalonsMessage').style.display = 'block';
+                    showToast('No salons found within 10km of your location', 'info');
+                } else {
+                    document.getElementById('noSalonsMessage').style.display = 'none';
+                    showToast(`Found ${nearbySalons.length} salons near you`, 'info');
+                }
                 
             } catch (error) {
                 console.error('Error fetching salons:', error);
                 showToast('Error fetching salons. Please try again.', 'error');
+                document.getElementById('noSalonsMessage').style.display = 'block';
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function searchSalonsByCity(city) {
+            showLoading(true, `Searching salons in ${city}...`);
+            
+            try {
+                // Fetch ACTIVE salons in the specific city
+                const { data: salons, error } = await supabase
+                    .from('merchants')
+                    .select('*')
+                    .eq('status', 'active')
+                    .ilike('city', `%${city}%`); // Case-insensitive search
+                
+                if (error) throw error;
+                
+                availableSalons = salons || [];
+                
+                if (availableSalons.length === 0) {
+                    showLoading(false);
+                    document.getElementById('noSalonsMessage').style.display = 'block';
+                    showToast(`No salons found in ${city}`, 'info');
+                    return;
+                }
+                
+                // Calculate distances if user location is available
+                if (userLocation) {
+                    availableSalons.forEach(salon => {
+                        salon.distance = calculateDistance(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            salon.latitude,
+                            salon.longitude
+                        );
+                    });
+                    availableSalons.sort((a, b) => a.distance - b.distance);
+                }
+                
+                // Display salons on map
+                displaySalonsOnMap(availableSalons);
+                
+                document.getElementById('noSalonsMessage').style.display = 'none';
+                showToast(`Found ${availableSalons.length} salons in ${city}`, 'info');
+                
+            } catch (error) {
+                console.error('Error fetching salons:', error);
+                showToast('Error fetching salons. Please try again.', 'error');
+                document.getElementById('noSalonsMessage').style.display = 'block';
             } finally {
                 showLoading(false);
             }
@@ -867,14 +844,18 @@
                 }).addTo(map);
                 
                 // Create popup content
+                const services = salon.services ? JSON.parse(salon.services) : [];
+                const serviceList = services.slice(0, 3).map(s => s.name).join(', ');
+                
                 const popupContent = `
                     <div class="salon-popup">
                         ${salon.image_url ? `<img src="${salon.image_url}" alt="${salon.salon_name}">` : ''}
                         <div class="popup-title">${salon.salon_name}</div>
-                        <div class="popup-distance">${salon.distance.toFixed(1)} km away</div>
+                        <div class="popup-distance">${salon.distance ? salon.distance.toFixed(1) + ' km away' : salon.city}</div>
                         <div class="popup-rating">
                             ${getRatingStars(salon.rating || 4.0)}
                         </div>
+                        ${serviceList ? `<p style="font-size: 11px; color: #666; margin: 5px 0;">Services: ${serviceList}${services.length > 3 ? '...' : ''}</p>` : ''}
                         <button class="btn btn-primary btn-sm popup-button" onclick="viewSalonDetails('${salon.id}')">
                             <i class="fas fa-calendar me-1"></i> Book Now
                         </button>
@@ -885,14 +866,17 @@
                 salonMarkers.push(marker);
             });
             
-            // Fit bounds to show all markers if we have any
-            if (salonMarkers.length > 0 && userMarker) {
-                const group = new L.featureGroup([userMarker, ...salonMarkers]);
-                map.fitBounds(group.getBounds().pad(0.1));
+            // Fit bounds to show all markers
+            if (salonMarkers.length > 0) {
+                const bounds = L.latLngBounds(salonMarkers.map(m => m.getLatLng()));
+                if (userMarker) {
+                    bounds.extend(userMarker.getLatLng());
+                }
+                map.fitBounds(bounds.pad(0.1));
             }
         }
 
-        function performSearch() {
+        async function performSearch() {
             const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
             const searchResults = document.getElementById('searchResults');
             
@@ -901,22 +885,50 @@
                 return;
             }
             
-            if (allSalons.length === 0) {
-                searchResults.innerHTML = '<div class="no-results">No salons loaded yet. Please search for nearby salons first.</div>';
-                searchResults.style.display = 'block';
-                return;
+            // If no salons loaded yet, fetch them first
+            if (availableSalons.length === 0) {
+                try {
+                    const { data: salons, error } = await supabase
+                        .from('merchants')
+                        .select('*')
+                        .eq('status', 'active');
+                    
+                    if (error) throw error;
+                    availableSalons = salons || [];
+                } catch (error) {
+                    console.error('Error fetching salons:', error);
+                    showToast('Error loading salons', 'error');
+                    return;
+                }
             }
             
             // Filter salons based on search term
-            const results = allSalons
+            const results = availableSalons
                 .filter(salon => {
-                    const matches = 
-                        salon.salon_name.toLowerCase().includes(searchTerm) ||
-                        (salon.description && salon.description.toLowerCase().includes(searchTerm)) ||
-                        (salon.services && JSON.stringify(salon.services).toLowerCase().includes(searchTerm)) ||
-                        salon.city.toLowerCase().includes(searchTerm);
+                    // Search in salon name
+                    if (salon.salon_name && salon.salon_name.toLowerCase().includes(searchTerm)) return true;
                     
-                    if (matches && userLocation) {
+                    // Search in city
+                    if (salon.city && salon.city.toLowerCase().includes(searchTerm)) return true;
+                    
+                    // Search in services
+                    if (salon.services) {
+                        try {
+                            const services = JSON.parse(salon.services);
+                            const serviceMatch = services.some(service => 
+                                service.name && service.name.toLowerCase().includes(searchTerm)
+                            );
+                            if (serviceMatch) return true;
+                        } catch (e) {
+                            // Invalid JSON, skip
+                        }
+                    }
+                    
+                    return false;
+                })
+                .map(salon => {
+                    // Calculate distance if user location available
+                    if (userLocation) {
                         salon.distance = calculateDistance(
                             userLocation.latitude,
                             userLocation.longitude,
@@ -924,11 +936,11 @@
                             salon.longitude
                         );
                     }
-                    
-                    return matches;
+                    return salon;
                 })
                 .sort((a, b) => {
-                    if (userLocation) {
+                    // Sort by distance if available, otherwise by name
+                    if (userLocation && a.distance && b.distance) {
                         return a.distance - b.distance;
                     }
                     return a.salon_name.localeCompare(b.salon_name);
@@ -942,13 +954,13 @@
                 let html = '';
                 results.forEach(salon => {
                     html += `
-                        <div class="search-result-item" onclick="zoomToSalon('${salon.id}')">
+                        <div class="search-result-item" onclick="selectSalonFromSearch('${salon.id}')">
                             <div class="search-result-name">${salon.salon_name}</div>
                             <div class="d-flex justify-content-between">
                                 <span class="search-result-location">
                                     <i class="fas fa-map-marker-alt me-1"></i>${salon.city}
                                 </span>
-                                ${userLocation ? `<span class="search-result-distance">${salon.distance.toFixed(1)} km</span>` : ''}
+                                ${userLocation && salon.distance ? `<span class="search-result-distance">${salon.distance.toFixed(1)} km</span>` : ''}
                             </div>
                         </div>
                     `;
@@ -959,13 +971,16 @@
             searchResults.style.display = 'block';
         }
 
-        function zoomToSalon(salonId) {
-            const salon = allSalons.find(s => s.id === salonId);
+        function selectSalonFromSearch(salonId) {
+            const salon = availableSalons.find(s => s.id === salonId);
             if (!salon) return;
             
             // Close search results
             document.getElementById('searchResults').style.display = 'none';
             document.getElementById('searchInput').value = salon.salon_name;
+            
+            // Hide no salons message
+            document.getElementById('noSalonsMessage').style.display = 'none';
             
             // Zoom to salon location
             map.setView([salon.latitude, salon.longitude], 15);
@@ -978,12 +993,43 @@
             
             if (marker) {
                 marker.openPopup();
+            } else {
+                // If marker doesn't exist, create it temporarily
+                const tempMarker = L.marker([salon.latitude, salon.longitude], {
+                    icon: L.divIcon({
+                        className: 'salon-marker',
+                        html: `<div style="background-color: var(--secondary); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);">
+                                <i class="fas fa-scissors" style="font-size: 12px;"></i>
+                              </div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    })
+                }).addTo(map);
+                
+                tempMarker.bindPopup(`<b>${salon.salon_name}</b><br>${salon.city}`).openPopup();
+                
+                // Remove after 5 seconds
+                setTimeout(() => {
+                    map.removeLayer(tempMarker);
+                }, 5000);
             }
         }
 
         function viewSalonDetails(salonId) {
             // In a real app, redirect to salon details page
-            window.location.href = `salon-details.html?id=${salonId}`;
+            // First check if user is logged in
+            supabase.auth.getUser().then(({ data: { user }, error }) => {
+                if (error || !user) {
+                    // Not logged in, redirect to login
+                    showToast('Please login to book appointments', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1500);
+                } else {
+                    // Logged in, proceed to salon details
+                    window.location.href = `salon-details.html?id=${salonId}`;
+                }
+            });
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -1039,25 +1085,15 @@
             
             // Remove toast after 3 seconds
             setTimeout(() => {
-                toast.remove();
+                if (toast.parentNode) {
+                    toast.remove();
+                }
             }, 3000);
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
         }
 
         // Make functions available globally
         window.viewSalonDetails = viewSalonDetails;
-        window.zoomToSalon = zoomToSalon;
+        window.selectSalonFromSearch = selectSalonFromSearch;
     </script>
 </body>
 </html>
