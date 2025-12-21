@@ -54,40 +54,8 @@
             text-decoration: underline;
         }
         
-        .ad-marquee {
-            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffeaa7);
-            padding: 8px 0;
-            overflow: hidden;
-            height: 40px;
-        }
-        
-        .marquee-content {
-            display: flex;
-            animation: marquee 20s linear infinite;
-            white-space: nowrap;
-        }
-        
-        .marquee-text {
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-            margin: 0 30px;
-            display: flex;
-            align-items: center;
-        }
-        
-        .marquee-text i {
-            margin-right: 8px;
-            font-size: 16px;
-        }
-        
-        @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        
         #map {
-            height: calc(100vh - 200px);
+            height: calc(100vh - 120px);
             width: 100%;
             z-index: 1;
         }
@@ -230,7 +198,7 @@
         
         .search-container {
             position: absolute;
-            top: 100px;
+            top: 80px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -269,7 +237,7 @@
         
         .search-results {
             position: absolute;
-            top: 160px;
+            top: 140px;
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -376,7 +344,7 @@
             <div class="spinner-border text-secondary" role="status" style="width: 3rem; height: 3rem;">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-3" id="loadingText">Finding nearby salons...</p>
+            <p class="mt-3" id="loadingText">Loading...</p>
         </div>
     </div>
 
@@ -395,18 +363,11 @@
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
                 <a href="index.html" class="logo">SevaOn<span>Time</span></a>
-                <a href="#" class="location-link" id="currentLocationLink">
+                <a href="#" class="location-link" id="currentLocationLink" onclick="getUserLocation()">
                     <i class="fas fa-map-marker-alt me-1"></i>
-                    <span id="locationText">Getting location...</span>
+                    <span id="locationText">Tap to get location</span>
                 </a>
             </div>
-        </div>
-    </div>
-
-    <!-- Advertisement Marquee -->
-    <div class="ad-marquee">
-        <div class="marquee-content" id="marqueeContent">
-            <!-- Marquee content will be loaded here -->
         </div>
     </div>
 
@@ -472,7 +433,7 @@
         let salonMarkers = [];
         let availableSalons = [];
 
-        // Initialize when DOM is loaded - NO AUTH CHECK ON LOAD
+        // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
         });
@@ -488,17 +449,13 @@
             // Setup event listeners
             setupEventListeners();
             
-            // Load ad marquee immediately
-            loadAdMarquee();
-            
-            // Get user location immediately
+            // Get user location automatically
             getUserLocation();
         }
 
         function setupEventListeners() {
             // Location buttons
             document.getElementById('currentLocationBtn').addEventListener('click', getUserLocation);
-            document.getElementById('currentLocationLink').addEventListener('click', getUserLocation);
             document.getElementById('searchNearbyBtn').addEventListener('click', searchNearbySalons);
             document.getElementById('refreshSearchBtn').addEventListener('click', searchNearbySalons);
             
@@ -528,24 +485,6 @@
             });
         }
 
-        function loadAdMarquee() {
-            const marqueeContent = document.getElementById('marqueeContent');
-            const ads = [
-                { icon: 'fa-scissors', text: 'Book your haircut in just 2 minutes!' },
-                { icon: 'fa-percent', text: 'Get 20% off on your first booking!' },
-                { icon: 'fa-clock', text: 'Same-day appointments available' },
-                { icon: 'fa-star', text: 'Top-rated salons near you' },
-                { icon: 'fa-gift', text: 'Refer a friend & get free service!' }
-            ];
-            
-            ads.forEach(ad => {
-                const marqueeText = document.createElement('div');
-                marqueeText.className = 'marquee-text';
-                marqueeText.innerHTML = `<i class="fas ${ad.icon}"></i> ${ad.text}`;
-                marqueeContent.appendChild(marqueeText);
-            });
-        }
-
         function getUserLocation() {
             showLoading(true, 'Getting your location...');
             
@@ -555,24 +494,31 @@
                 askForManualLocation();
                 return;
             }
-
-            // Try to get location quickly
+            
             navigator.geolocation.getCurrentPosition(
                 async function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
                     userLocation = {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
+                        latitude: lat,
+                        longitude: lon,
                         timestamp: new Date().getTime()
                     };
                     
-                    // Update location text immediately
-                    await updateLocationText();
+                    // Reverse geocode to get address
+                    try {
+                        const address = await reverseGeocode(lat, lon);
+                        document.getElementById('locationText').textContent = address;
+                    } catch (error) {
+                        document.getElementById('locationText').textContent = `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+                    }
                     
                     // Update map with user location
                     updateMapWithUserLocation();
                     
-                    // Hide loading after getting location
                     showLoading(false);
+                    showToast('Location found!', 'info');
                     
                     // Automatically search for nearby salons
                     searchNearbySalons();
@@ -580,35 +526,25 @@
                 function(error) {
                     showLoading(false);
                     
-                    let errorMessage = '';
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = 'Location access denied. Please allow location access to find nearby salons.';
-                            askForManualLocation();
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = 'Location information is unavailable.';
-                            askForManualLocation();
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage = 'Location request timed out.';
-                            getUserLocation(); // Retry once
-                            break;
-                        default:
-                            errorMessage = 'Unable to get location.';
-                            askForManualLocation();
-                    }
-                    
-                    if (errorMessage) {
-                        showToast(errorMessage, 'error');
-                    }
-                },
-                {
-                    enableHighAccuracy: false, // Faster response
-                    timeout: 5000, // 5 seconds timeout
-                    maximumAge: 300000 // Accept cached location up to 5 minutes old
+                    console.error('Error getting location:', error);
+                    showToast('Unable to retrieve your location. Please enable location services.', 'error');
+                    askForManualLocation();
                 }
             );
+        }
+
+        // Reverse geocode coordinates to get address
+        async function reverseGeocode(lat, lon) {
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                return data.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            } catch (error) {
+                console.error('Error reverse geocoding:', error);
+                return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+            }
         }
 
         function askForManualLocation() {
@@ -657,35 +593,6 @@
                 console.error('Error geocoding city:', error);
                 showLoading(false);
                 showToast('Error setting location. Please try again.', 'error');
-            }
-        }
-
-        async function updateLocationText() {
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.latitude}&lon=${userLocation.longitude}&zoom=18&addressdetails=1`
-                );
-                const data = await response.json();
-                
-                if (data.address) {
-                    const address = data.address;
-                    let locationName = '';
-                    
-                    if (address.city) {
-                        locationName = address.city;
-                    } else if (address.town) {
-                        locationName = address.town;
-                    } else if (address.village) {
-                        locationName = address.village;
-                    } else if (address.state) {
-                        locationName = address.state;
-                    }
-                    
-                    document.getElementById('locationText').textContent = locationName || 'Your location';
-                }
-            } catch (error) {
-                console.error('Error getting location name:', error);
-                document.getElementById('locationText').textContent = 'Your location';
             }
         }
 
@@ -1094,6 +1001,7 @@
         // Make functions available globally
         window.viewSalonDetails = viewSalonDetails;
         window.selectSalonFromSearch = selectSalonFromSearch;
+        window.getUserLocation = getUserLocation; // Make function globally accessible
     </script>
 </body>
 </html>
