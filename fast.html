@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp OTP Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      box-sizing: border-box;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h2>WhatsApp OTP Test</h2>
+  
+  <div>
+    <label>Phone Number (with country code):</label>
+    <input id="phone" type="text" placeholder="e.g., 919876543210" value="918815054893">
+  </div>
+  
+  <div>
+    <label>OTP (6 digits):</label>
+    <input id="otp" type="text" placeholder="e.g., 123456" value="123456">
+  </div>
+  
+  <button onclick="sendWhatsAppOtp()">Send WhatsApp OTP</button>
+  
+  <h3>Response:</h3>
+  <pre id="output">Click button to send...</pre>
+
+  <script>
+    // For WhatsApp, you need a WhatsApp Business API provider
+    // Here are some options:
+    
+    // Option 1: Twilio WhatsApp API
+    async function sendViaTwilio() {
+      const phone = document.getElementById('phone').value;
+      const otp = document.getElementById('otp').value;
+      const output = document.getElementById('output');
+      
+      // Note: You need to set up Twilio WhatsApp Sandbox first
+      const TWILIO_ACCOUNT_SID = "your_twilio_sid";
+      const TWILIO_AUTH_TOKEN = "your_twilio_token";
+      const TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886"; // Twilio sandbox number
+      
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+      
+      const formData = new URLSearchParams();
+      formData.append('To', `whatsapp:+${phone}`);
+      formData.append('From', TWILIO_WHATSAPP_FROM);
+      formData.append('Body', `Your OTP is: ${otp}`);
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`),
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: formData
+        });
+        
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        output.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Option 2: MessageBird WhatsApp API
+    async function sendViaMessageBird() {
+      const phone = document.getElementById('phone').value;
+      const otp = document.getElementById('otp').value;
+      const output = document.getElementById('output');
+      
+      const MESSAGEBIRD_API_KEY = "your_messagebird_key";
+      const url = "https://conversations.messagebird.com/v1/send";
+      
+      const payload = {
+        to: phone,
+        from: "your_whatsapp_channel_id",
+        type: "text",
+        content: {
+          text: `Your OTP code is: ${otp}`
+        }
+      };
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `AccessKey ${MESSAGEBIRD_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        output.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Option 3: Using WhatsApp-Web.js (Node.js backend required)
+    async function sendViaWhatsAppWeb() {
+      const phone = document.getElementById('phone').value;
+      const otp = document.getElementById('otp').value;
+      const output = document.getElementById('output');
+      
+      // This requires a Node.js backend
+      try {
+        const response = await fetch('http://localhost:3000/send-whatsapp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            phone: phone,
+            message: `Your OTP is: ${otp}`
+          })
+        });
+        
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        output.textContent = `Error: ${error.message}\n\nMake sure your backend server is running.`;
+      }
+    }
+    
+    // Option 4: Gupshup WhatsApp API (Popular in India)
+    async function sendViaGupshup() {
+      const phone = document.getElementById('phone').value;
+      const otp = document.getElementById('otp').value;
+      const output = document.getElementById('output');
+      
+      const GUPSHUP_API_KEY = "your_gupshup_api_key";
+      const GUPSHUP_SOURCE = "your_source_number";
+      
+      const url = "https://api.gupshup.io/sm/api/v1/msg";
+      
+      const formData = new URLSearchParams();
+      formData.append('channel', 'whatsapp');
+      formData.append('source', GUPSHUP_SOURCE);
+      formData.append('destination', phone);
+      formData.append('message', `Your OTP is: ${otp}`);
+      formData.append('src.name', 'YourAppName');
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'apikey': GUPSHUP_API_KEY,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: formData
+        });
+        
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        output.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    function sendWhatsAppOtp() {
+      alert("Choose a WhatsApp provider:\n\n1. Twilio (Recommended)\n2. MessageBird\n3. Gupshup (India)\n\nYou need to sign up and get API credentials first.");
+      output.textContent = "Please implement one of the WhatsApp API methods above.\n\nYou need to:\n1. Sign up for a WhatsApp Business API provider\n2. Get API credentials\n3. Set up WhatsApp Business account\n4. Replace placeholders with your actual keys";
+    }
+  </script>
+</body>
+</html>
