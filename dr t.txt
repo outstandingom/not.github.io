@@ -1,0 +1,1356 @@
+now give complete code for these two files and implement these // hooks/useBusinessRegistration.ts
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+export interface BusinessRegistrationData {
+  businessName: string;
+  businessType: string;
+  subBusinessType: string[];
+  registrationNumber: string;
+  vatGstNumber?: string;
+  website?: string;
+  businessLicense?: FileList;
+  businessAddress: string;
+  citiesServed: string[];
+  yearsInBusiness: number;
+  aboutServices: string;
+  serviceArea?: string;
+  serviceRadius?: number;
+  // Location fields for PostGIS
+  location?: {
+    lat: number;
+    lon: number;
+    address?: string;
+  };
+  contactName: string;
+  phoneNumber: string;
+  emailAddress: string;
+  alternateContact?: string;
+  preferredCommunication: string[];
+  linkedinProfile?: string;
+  facebookPage?: string;
+  instagramHandle?: string;
+  otherLinks?: string[];
+  governmentId: FileList;
+  businessCertificate?: FileList;
+  insuranceCertificate?: FileList;
+  bankName: string;
+  accountNumber: string;
+  accountType: string;
+  ifscCode?: string;
+}
+
+export interface BusinessType {
+  id: string;
+  name: string;
+}
+
+const isMissingDraftTable = (error: any) => {
+  if (!error) return false;
+  const msg = (error.message || '').toString().toLowerCase();
+  return error.code === '42P01' || msg.includes('business_registration_drafts');
+};
+
+export const useBusinessRegistration = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const getUserId = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) throw new Error('User not authenticated');
+    return data.user.id;
+  };
+
+  const loadDraft = async () => {
+    try {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('business_registration_drafts')
+        .select('data, current_step')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        if (isMissingDraftTable(error)) {
+          console.warn('Draft table missing; run latest migrations.');
+          return null;
+        }
+        console.error('Error loading draft:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error loading draft:', error);
+      return null;
+    }
+  };
+
+  const saveDraft = async (data: any, currentStep: number) => {
+    try {
+      const userId = await getUserId();
+      const { error } = await supabase
+        .from('business_registration_drafts')
+        .upsert({
+          user_id: userId,
+          data,
+          current_step: currentStep,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
+
+      if (error) {
+        if (isMissingDraftTable(error)) {
+          console.warn("Draft table missing; skipping draft save.");
+          return;
+        }
+        console.error('Error saving draft:', error);
+        throw error;
+      }
+
+      toast({
+        title: "Progress Saved",
+        description: "Your registration draft has been saved.",
+      });
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      toast({
+        title: "Save Failed",
+        description: "Could not save your progress. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearDraft = async () => {
+    try {
+      const userId = await getUserId();
+      const { error } = await supabase
+        .from('business_registration_drafts')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error && !isMissingDraftTable(error)) {
+        console.error('Error clearing draft:', error);
+      }
+    } catch (error) {
+      console.error('Error clearing draft:', error);
+    }
+  };
+
+  // Helper function to upload files
+  const uploadFile = async (file: File, userId: string): Promise<string> => {
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop();
+    const fileName = `${userId}/${timestamp}.${fileExtension}`;
+    
+    const { data, error } = await supabase.storage
+      .from('business-documents')
+      .upload(fileName, file, {
+        upsert: true,
+        contentType: file.type
+      });
+
+    if (error) {
+      throw new Error(`Failed to upload ${file.name}: ${error.message}`);
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('business-documents')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
+  // MAIN FUNCTION: Insert data into business_registrations table
+  const submitRegistration = async (data: BusinessRegistrationData): Promise<boolean> => {
+    setIsSubmitting(true);
+    
+    try {
+      // 1. Get authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('User not authenticated. Please login again.');
+      }
+
+      // 2. Get business_type_id from business_types table
+      const { data: businessTypeData, error: typeError } = await supabase
+        .from('business_types')
+        .select('id')
+        .eq('name', data.businessType)
+        .maybeSingle();
+
+      if (typeError) {
+        throw new Error('Error fetching business type from database.');
+      }
+
+      if (!businessTypeData) {
+        throw new Error(`Business type "${data.businessType}" not found in system. Please contact support.`);
+      }
+
+      const businessTypeId = businessTypeData.id;
+
+      // 3. Upload required documents
+      const documentUploads = [];
+      
+      // Government ID is required
+      if (!data.governmentId || !data.governmentId[0]) {
+        throw new Error('Government ID document is required.');
+      }
+
+      documentUploads.push(
+        uploadFile(data.governmentId[0], user.id)
+          .then(url => ({ type: 'government_id_url', url }))
+          .catch(err => { throw new Error(`Government ID: ${err.message}`); })
+      );
+
+      // Upload optional documents
+      if (data.businessLicense?.[0]) {
+        documentUploads.push(
+          uploadFile(data.businessLicense[0], user.id)
+            .then(url => ({ type: 'business_license_url', url }))
+        );
+      }
+
+      if (data.businessCertificate?.[0]) {
+        documentUploads.push(
+          uploadFile(data.businessCertificate[0], user.id)
+            .then(url => ({ type: 'business_certificate_url', url }))
+        );
+      }
+
+      if (data.insuranceCertificate?.[0]) {
+        documentUploads.push(
+          uploadFile(data.insuranceCertificate[0], user.id)
+            .then(url => ({ type: 'insurance_certificate_url', url }))
+        );
+      }
+
+      // Wait for all uploads to complete
+      const uploadResults = await Promise.allSettled(documentUploads);
+      
+      // Process upload results
+      const uploadedUrls: Record<string, string> = {};
+      for (const result of uploadResults) {
+        if (result.status === 'fulfilled') {
+          uploadedUrls[result.value.type] = result.value.url;
+        }
+      }
+
+      // Check if government ID was uploaded
+      if (!uploadedUrls.government_id_url) {
+        throw new Error('Government ID upload failed. Please try again.');
+      }
+
+      // 4. Prepare location data for PostGIS
+      let locationGeometry = null;
+      let addressCoordinates = null;
+      
+      if (data.location && data.location.lat && data.location.lon) {
+        // For PostGIS, we'll use a direct query with ST_SetSRID
+        locationGeometry = `POINT(${data.location.lon} ${data.location.lat})`;
+        
+        // Also store as JSON for easier access
+        addressCoordinates = {
+          lat: data.location.lat,
+          lon: data.location.lon,
+          address: data.location.address || data.businessAddress,
+          captured_at: new Date().toISOString(),
+          accuracy: 'user_provided'
+        };
+      }
+
+      // 5. Prepare the data object for database insertion
+      const registrationData = {
+        user_id: user.id,
+        business_name: data.businessName.trim(),
+        business_type_id: businessTypeId,
+        registration_number: data.registrationNumber.trim(),
+        vat_gst_number: data.vatGstNumber?.trim() || null,
+        website: data.website?.trim() || null,
+        business_license_url: uploadedUrls.business_license_url || null,
+        business_address: data.businessAddress.trim(),
+        cities_served: data.citiesServed || [],
+        service_area: data.serviceArea?.trim() || null,
+        years_in_business: data.yearsInBusiness,
+        about_services: data.aboutServices.trim(),
+        contact_name: data.contactName.trim(),
+        phone_number: data.phoneNumber.trim(),
+        email_address: data.emailAddress.trim(),
+        alternate_contact: data.alternateContact?.trim() || null,
+        preferred_communication: Array.isArray(data.preferredCommunication) 
+          ? data.preferredCommunication.join(', ') 
+          : data.preferredCommunication,
+        linkedin_profile: data.linkedinProfile?.trim() || null,
+        facebook_page: data.facebookPage?.trim() || null,
+        instagram_handle: data.instagramHandle?.trim() || null,
+        other_links: data.otherLinks || [],
+        government_id_url: uploadedUrls.government_id_url,
+        business_certificate_url: uploadedUrls.business_certificate_url || null,
+        insurance_certificate_url: uploadedUrls.insurance_certificate_url || null,
+        bank_name: data.bankName?.trim() || '',
+        account_number: data.accountNumber?.trim() || '',
+        account_type: data.accountType?.trim() || '',
+        ifsc_code: data.ifscCode?.trim() || null,
+        sub_business_types: data.subBusinessType || [],
+        // Location fields
+        service_radius: data.serviceRadius || 10,
+        address_coordinates: addressCoordinates,
+        // Status and timestamps
+        status: 'pending',
+        // Note: created_at and updated_at are automatically handled by DEFAULT values
+      };
+
+      // 6. Insert into business_registrations table
+      // We need to handle the geometry field specially
+      let insertQuery;
+      
+      if (locationGeometry) {
+        // Use RPC to insert with geometry
+        insertQuery = supabase.rpc('insert_business_with_geometry', {
+          p_business_data: registrationData,
+          p_geometry_wkt: locationGeometry
+        });
+      } else {
+        // Insert without geometry
+        insertQuery = supabase
+          .from('business_registrations')
+          .insert([registrationData])
+          .select()
+          .single();
+      }
+
+      const { data: insertedData, error: insertError } = await insertQuery;
+
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        
+        // Provide user-friendly error messages
+        if (insertError.code === '23505') {
+          throw new Error('A business registration already exists for this user.');
+        } else if (insertError.code === '23503') {
+          throw new Error('Invalid business type. Please select a valid business type.');
+        } else {
+          throw new Error(`Database error: ${insertError.message}`);
+        }
+      }
+
+      // 7. Clear draft after successful submission
+      await clearDraft();
+
+      // 8. Show success message
+      toast({
+        title: "✅ Registration Submitted Successfully!",
+        description: "Your business registration has been submitted for review. We'll contact you within 48 hours.",
+        variant: "default",
+        duration: 5000,
+      });
+
+      console.log('Registration submitted successfully:', insertedData);
+      return true;
+
+    } catch (error) {
+      console.error('Error submitting business registration:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "There was an error submitting your registration. Please try again.";
+      
+      toast({
+        title: "❌ Registration Failed",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
+      });
+      
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Function to get all business types for dropdown
+  const getBusinessTypes = async (): Promise<BusinessType[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('business_types')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching business types:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching business types:', error);
+      return [];
+    }
+  };
+
+  // Function to get user's existing registration (if any)
+  const getUserRegistration = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const { data, error } = await supabase
+        .from('business_registrations')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user registration:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching user registration:', error);
+      return null;
+    }
+  };
+
+  return {
+    // Main functions
+    submitRegistration,
+    getBusinessTypes,
+    getUserRegistration,
+    
+    // Draft functions
+    loadDraft,
+    saveDraft,
+    clearDraft,
+    
+    // State
+    isSubmitting,
+  };
+};   and also for this coponent import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form } from '@/components/ui/form';
+import { CheckCircle, Circle, ArrowLeft, ArrowRight, Building, Users, Share2, Shield, CreditCard, Clock, X, Loader2, Phone, Mail, MessageSquare } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { EnhancedBusinessInfoStep } from './form-steps/EnhancedBusinessInfoStep';
+import { ContactInfoStep } from './form-steps/ContactInfoStep';
+import { SocialMediaStep } from './form-steps/SocialMediaStep';
+import { EnhancedDocumentsStep } from './form-steps/EnhancedDocumentsStep';
+import { BankingStep } from './form-steps/BankingStep';
+import { useBusinessRegistration, BusinessRegistrationData } from '@/hooks/useBusinessRegistration';
+import { useProviderDashboard } from '@/hooks/useProviderDashboard';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Label } from '@/components/ui/label';
+
+const businessRegistrationSchema = z.object({
+  businessName: z.string().min(2, 'Business name is required'),
+  businessType: z.string().min(1, 'Business type is required'),
+  subBusinessType: z.array(z.string()).optional(),
+  registrationNumber: z.string().min(5, 'Registration number must be at least 5 characters'),
+  vatGstNumber: z.string().optional(),
+  website: z.string().url('Invalid URL').optional().or(z.literal('')),
+  businessLicense: z.any().optional(),
+  businessAddress: z.string().min(10, 'Business address is required'),
+  citiesServed: z.array(z.string()).min(1, 'At least one city must be selected'),
+  yearsInBusiness: z.number().min(0, 'Years in business is required'),
+  aboutServices: z.string().min(20, 'Please provide detailed information about your services'),
+  contactName: z.string().min(2, 'Contact name is required'),
+  phoneNumber: z.string().min(10, 'Valid phone number is required'),
+  emailAddress: z.string().email('Valid email is required'),
+  alternateContact: z.string().optional(),
+  preferredCommunication: z.array(z.string()).min(1, 'At least one communication method is required'),
+  linkedinProfile: z.string().optional(),
+  facebookPage: z.string().optional(),
+  instagramHandle: z.string().optional(),
+  otherLinks: z.array(z.string()).optional(),
+  governmentId: z.any().refine(files => files?.length > 0, 'Government ID is required'),
+  businessCertificate: z.any().optional(),
+  insuranceCertificate: z.any().optional(),
+  // Make banking fields required as per your table schema
+  bankName: z.string().min(1, 'Bank name is required'),
+  accountNumber: z.string().min(5, 'Account number is required'),
+  accountType: z.string().min(1, 'Account type is required'),
+  ifscCode: z.string().optional(),
+});
+
+const businessRegistrationSchemaAdmin = businessRegistrationSchema.extend({
+  governmentId: z.any().optional(),
+});
+
+type BusinessRegistrationForm = z.infer<typeof businessRegistrationSchema>;
+
+interface BusinessRegistrationFormProps {
+  adminMode?: boolean;
+  targetUserId?: string;
+  onAdminSubmit?: (data: BusinessRegistrationForm) => Promise<boolean>;
+}
+
+const steps = [
+  { id: 1, title: 'Business Information', icon: Building, description: 'Basic business details' },
+  { id: 2, title: 'Contact Information', icon: Users, description: 'How to reach you' },
+  { id: 3, title: 'Social Media', icon: Share2, description: 'Online presence (optional)' },
+  { id: 4, title: 'Documents', icon: Shield, description: 'Verification documents' },
+  { id: 5, title: 'Banking', icon: CreditCard, description: 'Payment information' },
+];
+
+// Enhanced ContactInfoStep with auto-fill functionality
+interface EnhancedContactInfoStepProps {
+  form: any;
+  userData?: {
+    full_name?: string;
+    email?: string;
+    mobile_number?: string;
+  };
+}
+
+const EnhancedContactInfoStep: React.FC<EnhancedContactInfoStepProps> = ({ form, userData }) => {
+  const { setValue, formState, getValues } = form;
+
+  // Auto-fill user data when component mounts or userData changes
+  useEffect(() => {
+    if (userData) {
+      // Only fill if field is empty
+      if (userData.full_name && !getValues('contactName')) {
+        setValue('contactName', userData.full_name, { shouldValidate: true });
+      }
+      if (userData.email && !getValues('emailAddress')) {
+        setValue('emailAddress', userData.email, { shouldValidate: true });
+      }
+      if (userData.mobile_number && !getValues('phoneNumber')) {
+        setValue('phoneNumber', userData.mobile_number, { shouldValidate: true });
+        // Auto-select WhatsApp as preferred communication if not already selected
+        const currentMethods = getValues('preferredCommunication') || [];
+        if (currentMethods.length === 0) {
+          setValue('preferredCommunication', ['whatsapp'], { shouldValidate: true });
+        }
+      }
+    }
+  }, [userData, setValue, getValues]);
+
+  // Function to copy phone number to alternate contact
+  const copyToAlternateContact = () => {
+    const phone = getValues('phoneNumber');
+    if (phone) {
+      setValue('alternateContact', phone, { shouldValidate: true });
+    }
+  };
+
+  // Quick action buttons for communication methods
+  const setCommunicationMethods = (methods: string[]) => {
+    setValue('preferredCommunication', methods, { shouldValidate: true });
+  };
+
+  return (
+    <div className="space-y-6">
+      {userData && (
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">
+            <strong>Auto-filled from your profile:</strong> Contact details are pre-filled from your account. You can edit if needed.
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-4">
+        <div>
+          <Label htmlFor="contactName" className="mb-2 block">
+            Contact Person Name *
+          </Label>
+          <input
+            id="contactName"
+            type="text"
+            {...form.register('contactName')}
+            className="w-full px-3 py-2 border rounded-md"
+            placeholder="Enter contact person name"
+          />
+          {formState.errors.contactName && (
+            <p className="text-red-500 text-sm mt-1">{formState.errors.contactName.message?.toString()}</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="phoneNumber" className="mb-2 block">
+              Phone Number *
+            </Label>
+            <input
+              id="phoneNumber"
+              type="tel"
+              {...form.register('phoneNumber')}
+              className="w-full px-3 py-2 border rounded-md"
+              placeholder="Enter phone number"
+            />
+            {formState.errors.phoneNumber && (
+              <p className="text-red-500 text-sm mt-1">{formState.errors.phoneNumber.message?.toString()}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="emailAddress" className="mb-2 block">
+              Email Address *
+            </Label>
+            <input
+              id="emailAddress"
+              type="email"
+              {...form.register('emailAddress')}
+              className="w-full px-3 py-2 border rounded-md"
+              placeholder="Enter email address"
+            />
+            {formState.errors.emailAddress && (
+              <p className="text-red-500 text-sm mt-1">{formState.errors.emailAddress.message?.toString()}</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="alternateContact" className="mb-2 block">
+            Alternate Contact (Optional)
+          </Label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              id="alternateContact"
+              type="tel"
+              {...form.register('alternateContact')}
+              className="flex-1 px-3 py-2 border rounded-md"
+              placeholder="Alternate phone number"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={copyToAlternateContact}
+              className="whitespace-nowrap"
+            >
+              Same as Phone
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <Label className="mb-3 block">Preferred Communication Method *</Label>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="comm-phone"
+                value="phone"
+                {...form.register('preferredCommunication')}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="comm-phone" className="flex items-center gap-2 cursor-pointer">
+                <Phone className="w-4 h-4" />
+                Phone Call
+              </Label>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="comm-whatsapp"
+                value="whatsapp"
+                {...form.register('preferredCommunication')}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="comm-whatsapp" className="flex items-center gap-2 cursor-pointer">
+                <MessageSquare className="w-4 h-4" />
+                WhatsApp
+              </Label>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="comm-email"
+                value="email"
+                {...form.register('preferredCommunication')}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="comm-email" className="flex items-center gap-2 cursor-pointer">
+                <Mail className="w-4 h-4" />
+                Email
+              </Label>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="comm-sms"
+                value="sms"
+                {...form.register('preferredCommunication')}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="comm-sms" className="cursor-pointer">
+                SMS
+              </Label>
+            </div>
+          </div>
+          {formState.errors.preferredCommunication && (
+            <p className="text-red-500 text-sm mt-1">Select at least one communication method</p>
+          )}
+        </div>
+
+        <div className="pt-4 border-t">
+          <h4 className="font-medium mb-3">Quick Actions</h4>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommunicationMethods(['whatsapp'])}
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Use WhatsApp Only</span>
+              <span className="sm:hidden">WhatsApp</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommunicationMethods(['phone'])}
+              className="flex items-center gap-2"
+            >
+              <Phone className="w-4 h-4" />
+              <span className="hidden sm:inline">Use Phone Only</span>
+              <span className="sm:hidden">Phone</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommunicationMethods(['whatsapp', 'phone'])}
+              className="hidden sm:inline-flex"
+            >
+              Both Phone & WhatsApp
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommunicationMethods(['whatsapp', 'email'])}
+              className="hidden sm:inline-flex"
+            >
+              WhatsApp & Email
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommunicationMethods(['whatsapp', 'phone'])}
+              className="sm:hidden"
+            >
+              Both
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCommunicationMethods(['whatsapp', 'email'])}
+              className="sm:hidden"
+            >
+              WhatsApp + Email
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const BusinessRegistrationForm: React.FC<BusinessRegistrationFormProps> = ({
+  adminMode = false,
+  targetUserId,
+  onAdminSubmit,
+}) => {
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isReapplying, setIsReapplying] = useState(false);
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    full_name?: string;
+    email?: string;
+    mobile_number?: string;
+  } | null>(null);
+  const draftLoadedRef = useRef(false);
+  const { submitRegistration, isSubmitting, loadDraft, saveDraft, clearDraft } = useBusinessRegistration();
+  const { user } = useAuth();
+  const { businessRegistration, hasRegistration, loading } = useProviderDashboard(user?.id);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const activeSchema = useMemo(
+    () => (adminMode ? businessRegistrationSchemaAdmin : businessRegistrationSchema),
+    [adminMode]
+  );
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        // Get user email from auth
+        const email = user.email;
+        
+        // Get user profile from database
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('full_name, mobile_number')
+          .eq('id', user.id)
+          .single();
+
+        if (!error) {
+          setUserProfile({
+            email,
+            full_name: profile?.full_name,
+            mobile_number: profile?.mobile_number
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  const form = useForm<BusinessRegistrationForm>({
+    resolver: zodResolver(activeSchema),
+    mode: 'onChange',
+    defaultValues: {
+      businessName: '',
+      businessType: '',
+      subBusinessType: [],
+      registrationNumber: '',
+      vatGstNumber: '',
+      website: '',
+      businessAddress: '',
+      citiesServed: [],
+      yearsInBusiness: 0,
+      aboutServices: '',
+      contactName: '',
+      phoneNumber: '',
+      emailAddress: '',
+      alternateContact: '',
+      preferredCommunication: ['whatsapp'], // Default to WhatsApp
+      linkedinProfile: '',
+      facebookPage: '',
+      instagramHandle: '',
+      otherLinks: [],
+      bankName: '',
+      accountNumber: '',
+      accountType: '',
+      ifscCode: '',
+    },
+  });
+
+  const { handleSubmit, trigger, formState: { errors, isValid } } = form;
+
+  // Prepare data that can be stored in DB (strip files)
+  const getSerializableDraft = (stepToStore: number) => {
+    const values = form.getValues();
+    const { businessLicense, governmentId, businessCertificate, insuranceCertificate, ...rest } = values;
+    return {
+      ...rest,
+      currentStep: stepToStore,
+    };
+  };
+
+  // Restore draft from database (provider only)
+  useEffect(() => {
+    if (adminMode) return;
+    
+    const fetchDraft = async () => {
+      if (draftLoadedRef.current) return;
+      draftLoadedRef.current = true;
+
+      const draft = await loadDraft();
+      if (draft?.data) {
+        const { current_step, data } = draft;
+        
+        // Merge draft data with user profile data for contact fields
+        const mergedData = {
+          ...data,
+          contactName: data.contactName || userProfile?.full_name || '',
+          emailAddress: data.emailAddress || userProfile?.email || '',
+          phoneNumber: data.phoneNumber || userProfile?.mobile_number || '',
+        };
+        
+        form.reset(mergedData);
+        if (current_step && current_step >= 1 && current_step <= steps.length) {
+          setCurrentStep(current_step);
+        }
+        toast({
+          title: "Draft Loaded",
+          description: "We restored your previous registration progress.",
+        });
+      } else if (userProfile) {
+        // If no draft exists, auto-fill contact info from user profile
+        // This will happen when form first loads or when user navigates to step 2
+        const currentValues = form.getValues();
+        if (!currentValues.contactName && userProfile.full_name) {
+          form.setValue('contactName', userProfile.full_name);
+        }
+        if (!currentValues.emailAddress && userProfile.email) {
+          form.setValue('emailAddress', userProfile.email);
+        }
+        if (!currentValues.phoneNumber && userProfile.mobile_number) {
+          form.setValue('phoneNumber', userProfile.mobile_number);
+        }
+        if (!currentValues.preferredCommunication || currentValues.preferredCommunication.length === 0) {
+          form.setValue('preferredCommunication', ['whatsapp']);
+        }
+      }
+    };
+
+    if (user) {
+      fetchDraft();
+    }
+  }, [form, loadDraft, toast, user, adminMode, userProfile]);
+
+  const nextStep = async () => {
+    if (!adminMode) {
+      const draft = getSerializableDraft(currentStep);
+      await saveDraft(draft, currentStep);
+    }
+
+    const fieldsToValidate = getFieldsForStep(currentStep);
+    const isStepValid = await trigger(fieldsToValidate);
+    
+    if (isStepValid) {
+      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const prevStep = async () => {
+    if (!adminMode) {
+      const draft = getSerializableDraft(currentStep);
+      await saveDraft(draft, currentStep);
+    }
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  const getFieldsForStep = (step: number) => {
+    switch (step) {
+      case 1:
+        return ['businessName', 'businessType', 'registrationNumber', 'businessAddress', 'citiesServed', 'yearsInBusiness', 'aboutServices'] as const;
+      case 2:
+        return ['contactName', 'phoneNumber', 'emailAddress', 'preferredCommunication'] as const;
+      case 3:
+        return [] as const; // Optional step
+      case 4:
+        return ['businessLicense', 'governmentId', 'businessCertificate'] as const;
+      case 5:
+        return ['bankName', 'accountNumber', 'accountType'] as const; // Now required
+      default:
+        return [] as const;
+    }
+  };
+
+  const handleReapply = async () => {
+    if (!businessRegistration?.id || !user?.id) return;
+    
+    setIsReapplying(true);
+    try {
+      // Delete the existing registration
+      const { error: deleteError } = await supabase
+        .from('business_registrations')
+        .delete()
+        .eq('id', businessRegistration.id)
+        .eq('user_id', user.id); // Ensure user can only delete their own registration
+
+      if (deleteError) {
+        console.error('Error deleting registration:', deleteError);
+        toast({
+          title: "Error",
+          description: "Failed to delete existing registration. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a notification for the reapplication
+      const { error: notificationError } = await supabase.rpc('create_notification', {
+        p_user_id: user.id,
+        p_title: 'Business Registration Reapplication Started',
+        p_message: 'You have started a new business registration application. Please complete all steps to resubmit.',
+        p_type: 'info'
+      });
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+      }
+
+      toast({
+        title: "Success",
+        description: "Previous registration deleted. You can now submit a new application.",
+      });
+
+      // Show the registration form immediately
+      setShowRegistrationForm(true);
+    } catch (error) {
+      console.error('Error during reapplication:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsReapplying(false);
+    }
+  };
+
+  const onSubmit = async (data: BusinessRegistrationForm) => {
+    try {
+      if (adminMode && onAdminSubmit) {
+        const success = await onAdminSubmit(data);
+        if (success) {
+          toast({
+            title: "Success",
+            description: "Registration submitted successfully!",
+          });
+          form.reset();
+        }
+        return;
+      }
+
+      const success = await submitRegistration(data as BusinessRegistrationData);
+      if (success) {
+        await clearDraft();
+        toast({
+          title: "Success",
+          description: "Registration submitted successfully!",
+        });
+        // Redirect to dashboard or home page after successful submission
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit registration. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return <EnhancedBusinessInfoStep form={form} />;
+      case 2:
+        return <EnhancedContactInfoStep form={form} userData={userProfile} />;
+      case 3:
+        return <SocialMediaStep form={form} />;
+      case 4:
+        return <EnhancedDocumentsStep form={form} />;
+      case 5:
+        return <BankingStep form={form} />;
+      default:
+        return null;
+    }
+  };
+
+  const progress = (currentStep / steps.length) * 100;
+
+  // Show loading state
+  if (!adminMode && loading) {
+    return (
+      <div className="min-h-screen bg-gradient-section flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-construction-neutral">Loading registration status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user already has an approved registration, redirect to dashboard
+  if (!adminMode && !loading && hasRegistration && businessRegistration?.status === 'approved') {
+    return (
+      <div className="min-h-screen bg-gradient-section py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600 text-lg sm:text-xl">
+                <CheckCircle className="w-6 h-6" />
+                Registration Already Complete
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Your business registration has already been approved. You can access all provider features.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-green-50 rounded-lg">
+                  <h3 className="font-medium text-green-800 mb-2 text-sm sm:text-base">Registration Details:</h3>
+                  <p className="text-sm sm:text-base"><strong>Business:</strong> {businessRegistration.business_name}</p>
+                  <p className="text-sm sm:text-base"><strong>Status:</strong> <span className="text-green-600">Approved</span></p>
+                  <p className="text-sm sm:text-base"><strong>Cities Served:</strong> {businessRegistration.cities_served.join(', ')}</p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button onClick={() => navigate('/provider-dashboard')} className="flex-1">
+                    Go to Dashboard
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/provider-requirements')} className="flex-1">
+                    View Requirements
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // If user has a rejected registration and hasn't clicked reapply, show reapply option
+  if (!adminMode && !loading && hasRegistration && businessRegistration?.status === 'rejected' && !showRegistrationForm) {
+    return (
+      <div className="min-h-screen bg-gradient-section py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600 text-lg sm:text-xl">
+                <X className="w-6 h-6" />
+                Registration Rejected
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Your business registration was rejected. You can reapply after addressing the issues.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <h3 className="font-medium text-red-800 mb-2 text-sm sm:text-base">Registration Details:</h3>
+                  <p className="text-sm sm:text-base"><strong>Business:</strong> {businessRegistration.business_name}</p>
+                  <p className="text-sm sm:text-base"><strong>Status:</strong> <span className="text-red-600">Rejected</span></p>
+                  <p className="text-sm sm:text-base"><strong>Submitted:</strong> {new Date(businessRegistration.created_at).toLocaleDateString()}</p>
+                  {businessRegistration.rejection_reason && (
+                    <p className="text-sm sm:text-base"><strong>Reason:</strong> <span className="text-red-600">{businessRegistration.rejection_reason}</span></p>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">
+                  Please review the rejection reason above and make necessary corrections before reapplying.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        disabled={isReapplying}
+                        className="flex-1"
+                      >
+                        {isReapplying ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          'Reapply Now'
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-[95vw] sm:max-w-md">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Reapplication</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm sm:text-base">
+                          This will delete your current registration and allow you to submit a new application. 
+                          Make sure you have addressed the rejection reasons before reapplying.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
+                        <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleReapply}>
+                          Yes, Reapply
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <Button variant="outline" onClick={() => navigate('/notifications')} className="flex-1">
+                    View Notifications
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // If user has a pending registration, show status
+  if (!adminMode && !loading && hasRegistration && businessRegistration?.status === 'pending') {
+    return (
+      <div className="min-h-screen bg-gradient-section py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-yellow-600 text-lg sm:text-xl">
+                <Clock className="w-6 h-6" />
+                Registration Under Review
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Your business registration is currently being reviewed by our team.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-yellow-50 rounded-lg">
+                  <h3 className="font-medium text-yellow-800 mb-2 text-sm sm:text-base">Registration Details:</h3>
+                  <p className="text-sm sm:text-base"><strong>Business:</strong> {businessRegistration.business_name}</p>
+                  <p className="text-sm sm:text-base"><strong>Status:</strong> <span className="text-yellow-600">Under Review</span></p>
+                  <p className="text-sm sm:text-base"><strong>Submitted:</strong> {new Date(businessRegistration.created_at).toLocaleDateString()}</p>
+                </div>
+                <p className="text-sm text-gray-600">
+                  We'll contact you within 48 hours with an update on your registration status.
+                </p>
+                <Button onClick={() => navigate('/provider-dashboard')} className="w-full">
+                  Go to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-section py-8 px-3 sm:px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-6 sm:mb-8 px-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-construction-secondary mb-2">
+            Business Registration
+          </h1>
+          <p className="text-sm sm:text-base text-construction-neutral">
+            Join BuildOnClicks's network of verified professionals
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-6 sm:mb-8 px-2">
+          <div className="flex justify-between items-center mb-3 sm:mb-4">
+            <span className="text-xs sm:text-sm text-construction-neutral">
+              Step {currentStep} of {steps.length}
+            </span>
+            <span className="text-xs sm:text-sm text-construction-neutral">
+              {Math.round(progress)}% Complete
+            </span>
+          </div>
+          <Progress value={progress} className="h-1 sm:h-2" />
+        </div>
+
+        {/* Step Indicator */}
+        <div className="flex justify-center mb-6 sm:mb-8 px-2">
+          <div className="flex overflow-x-auto pb-3 sm:pb-4 scrollbar-hide w-full">
+            {steps.map((step) => {
+              const StepIcon = step.icon;
+              const isCompleted = currentStep > step.id;
+              const isCurrent = currentStep === step.id;
+              
+              return (
+                <div
+                  key={step.id}
+                  className={`flex flex-col items-center min-w-[100px] sm:min-w-[120px] px-1 ${
+                    isCurrent ? 'text-construction-primary' : 
+                    isCompleted ? 'text-green-600' : 'text-construction-neutral'
+                  }`}
+                >
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-all ${
+                    isCurrent ? 'bg-construction-primary text-white' :
+                    isCompleted ? 'bg-green-600 text-white' : 'bg-gray-200'
+                  }`}>
+                    {isCompleted ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6" /> : <StepIcon className="w-5 h-5 sm:w-6 sm:h-6" />}
+                  </div>
+                  <span className="text-xs font-medium text-center">{step.title}</span>
+                  <span className="text-xs text-construction-neutral text-center hidden sm:block">{step.description}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <Card className="shadow-card mx-2 sm:mx-0">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              {React.createElement(steps[currentStep - 1].icon, { className: "w-4 h-4 sm:w-5 sm:h-5" })}
+              {steps[currentStep - 1].title}
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              {steps[currentStep - 1].description}
+              {currentStep === 2 && userProfile && (
+                <span className="text-green-600 ml-2 hidden sm:inline">✓ Details auto-filled from your account</span>
+              )}
+            </CardDescription>
+            {currentStep === 2 && userProfile && (
+              <div className="sm:hidden">
+                <span className="text-green-600 text-xs">✓ Details auto-filled from your account</span>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6">
+            <Form {...form}>
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderStep()}
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Navigation Buttons */}
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={currentStep === 1}
+                    className="flex items-center justify-center gap-2 order-2 sm:order-1"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+
+                  {currentStep === steps.length ? (
+                    <Button
+                      type="submit"
+                      className="flex items-center justify-center gap-2 bg-construction-primary hover:bg-construction-primary/90 order-1 sm:order-2 mb-2 sm:mb-0"
+                      disabled={!isValid || isSubmitting}
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Registration'}
+                      <CheckCircle className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={nextStep}
+                      className="flex items-center justify-center gap-2 bg-construction-primary hover:bg-construction-primary/90 order-1 sm:order-2 mb-2 sm:mb-0"
+                    >
+                      Save & Next
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};  give complete code which i can replace wiht my existing thses two files
